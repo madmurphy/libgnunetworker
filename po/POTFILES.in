@@ -1,0 +1,5 @@
+# List of source files containing translatable strings.
+
+src/gnunet_worker_lib.h
+src/worker.c
+src/worker.h

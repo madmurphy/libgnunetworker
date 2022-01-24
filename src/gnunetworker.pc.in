@@ -1,0 +1,13 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+datarootdir=@datarootdir@
+datadir=@datadir@
+includedir=@includedir@
+
+Name: @PACKAGE_NAME@
+Description: @PROJECT_DESCRIPTION@
+Version: @PACKAGE_VERSION@
+Requires: 
+Libs: -L${libdir} -l@PROJECT_NAME@
+Cflags: -I${includedir}

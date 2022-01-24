@@ -1,0 +1,33 @@
+{
+	"name": "libgnunetworker",
+	"version": "0.1.0",
+	"description": "Multithreading with GNUnet",
+	"homepage": "https://github.com/madmurphy/libgnunetworker",
+	"author": "madmurphy333@gmail.com",
+	"license": "AGPL-3.0-or-later",
+	"repo": "madmurphy/libgnunetworker",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/madmurphy/libgnunetworker.git"
+	},
+	"src": [
+		"src/worker.c",
+		"src/worker.h",
+		"src/gnunet_worker_lib.h"
+	],
+	"bugs": {
+		"url": "https://github.com/madmurphy/libgnunetworker/issues",
+		"email": "madmurphy333@gmail.com"
+	},
+	"keywords": [
+		"c",
+		"gnunet",
+		"gnu",
+		"library",
+		"multithreading",
+		"shared-library",
+		"threads",
+		"unix"
+	]
+}
+

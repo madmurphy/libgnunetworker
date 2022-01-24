@@ -1,0 +1,191 @@
+GNUnet Worker
+=============
+
+Multithreading with GNUnet
+
+
+Overview
+--------
+
+As it is often the case with network applications, GNUnet is built following a
+single-threaded event-driven model. This is an optimal model when dealing with
+high concurrency scenarios, but is poorly suited for other contexts (e.g.
+graphical user interfaces).
+
+To accomplish its event-driven flow, GNUnet uses a scheduler. Once such
+scheduler is started, it is not designed to be invoked by other threads, but
+can schedule only routines requested by its own thread. What to do then if an
+application needs to deal with multiple threads and let the latter interface
+with the GNUnet scheduler?
+
+This framework offers a simple solution by creating a “bearing” between the
+threads and the scheduler. The latter is run in its own dedicated thread and is
+unaware of the existence of other threads. Such a bearing consists in a “wish
+list” of routines to schedule, which can be populated asynchronously by any
+thread and gets emptied synchronously only by the scheduler according to the
+latter's natural flow.
+
+When using this framework, threads must never invoke the scheduler directly
+(preferably they must not even include `gnunet/gnunet_scheduler_lib.h` in their
+scope), and can only use `GNUNET_WORKER_push_load()` or
+`GNUNET_WORKER_push_load_with_priority()` to schedule new functions. They will
+also have access to all the functions declared in `gnunet/gnunet_worker_lib.h`.
+
+Functions scheduled in this way, on the other hand, will have full access to
+the scheduler's framework and will follow its single-threaded event-driven flow
+(indeed they will run in the scheduler's thread).
+
+Under `examples/articulated-example` you can find an example of such division
+of labour, where `all-other-threads.c` launches multiple threads and
+`gnunet-thread.c` contains only functions that will run in the scheduler's
+thread.
+
+
+Simple example
+--------------
+
+``` c
+#include <stdio.h>
+#include <gnunet/gnunet_worker_lib.h>
+
+static void task_for_the_scheduler (void * const data) {
+
+    printf("Hello world\n");
+
+}
+
+int main (const int argc, const char * const * const argv) {
+
+    /*  Create a separate thread where GNUnet's scheduler is run  */
+    GNUNET_WORKER_Handle * my_current_worker = GNUNET_WORKER_create(
+        NULL,
+        NULL,
+        NULL
+    );
+
+    /*  Run a function in the scheduler's thread  */
+    GNUNET_WORKER_push_load(my_current_worker, &task_for_the_scheduler, NULL);
+
+    /*  Make sure that threads have had enough time to start...  */
+    sleep(1);
+
+    /*  Shutdown the scheduler and wait until it returns  */
+    GNUNET_WORKER_synch_destroy(my_current_worker);
+
+}
+```
+
+See the `examples` subdirectory for further examples.
+
+
+A minimal tutorial
+------------------
+
+There are three ways to create a GNUnet worker:
+
+1. `GNUNET_WORKER_create()`: the GNUnet scheduler will be launched in a new
+   thread, equipped with a “load listener” for scheduling routines pushed by
+   other threads
+2. `GNUNET_WORKER_start_serving()`: the current thread will launch the GNUnet
+   scheduler and equip it with a “load listener” for scheduling routines pushed
+   by other threads
+3. `GNUNET_WORKER_adopt_running_scheduler()`: this function assumes that
+   the GNUnet scheduler is already running in the current thread (i.e. the user
+   has previously launched either `GNUNET_SCHEDULER_run()` or
+   `GNUNET_PROGRAM_run()`) and equipping the scheduler with a “load listener”
+   for scheduling routines pushed by other threads has become necessary
+
+As soon as a handle for a new worker is made available, it is immediately
+possible to push load into it using `GNUNET_WORKER_push_load()` or
+`GNUNET_WORKER_push_load_with_priority()`. The routines added in this way will
+be launched asynchronously in the worker's thread.
+
+There are three ways for terminating a worker and shutting down its associated
+GNUnet scheduler:
+
+1. `GNUNET_WORKER_asynch_destroy()`: the worker will be terminated and its
+   memory freed, without waiting for the scheduler to complete the shutdown –
+   this will be completed in parallel (asynchronous)
+2. `GNUNET_WORKER_synch_destroy()`: the worker will be terminated and its
+   memory freed, waiting for the scheduler to complete the shutdown
+   (synchronous, “join”)
+3. `GNUNET_WORKER_timedsynch_destroy()`: the worker will be terminated and its
+   memory freed, waiting for the scheduler to complete the shutdown
+   (synchronous, “join”) only if this happens within a certain time, otherwise
+   it will be completed in parallel (asynchronous)
+
+If a worker must be destroyed without shutting down its associated scheduler,
+the `GNUNET_WORKER_dismiss()` function is available. The latter turns a worker
+back into a “classic GNUnet scheduler” without any multithreading facility and
+without a “load listener”.
+
+All the functions provided by this library can be safely launched by any thread
+at any moment.
+
+
+Current limitations
+-------------------
+
+The library is designed to be able to launch more than one scheduler at the
+same time (i.e., repeated invocations of `GNUNET_WORKER_create()`), however the
+scheduler currently used by GNUnet is not thread-safe. Therefore, unless
+something changes in GNUnet's code, `GNUNET_WORKER_create()` should be invoked
+only once; or at least, it is necessary to make sure that a previous worker is
+always destroyed before invoking `GNUNET_WORKER_create()` again.
+
+The library launches the GNUnet scheduler using `GNUNET_SCHEDULER_run()`, which
+by default installs signal handlers. Installing signal handlers on a secondary
+thread however is rarely the way to go. The problem could be solved by making
+the library rely on `GNUNET_SCHEDULER_run_with_optional_signals()` instead of
+`GNUNET_SCHEDULER_run()`, but the former function, despite being listed in
+`gnunet/gnunet_scheduler_lib.h`, has never been implemented.
+
+
+Installation
+------------
+
+On most Unix-like systems, you should be able to install this package using the
+following common steps:
+
+``` sh
+./configure
+make
+make install-strip
+```
+
+If the `strip` utility is not available on your machine, use `make install`
+instead (it will produce larger binaries).
+
+If the `configure` script is missing from your package you need to generate it
+by running the `bootstrap` script. By default, `bootstrap` will also run the
+`configure` script immediately after having generated it, so you may type the
+`make` command directly after `bootstrap`. To list different options use
+`./bootstrap --help`.
+
+For further information, see [INSTALL][2].
+
+
+Dependencies
+------------
+
+This library depends on the following packages:
+
+* pkg-config
+* gettext
+* gnunet
+
+Please make sure that they are present before compiling the code.
+
+
+Free software
+-------------
+
+**GNUnet Worker** is free software. You can redistribute it and/or modify it
+under the terms of the AGPL license version 3 or any later version. See
+[COPYING][3] for details.
+
+
+  [1]: https://github.com/madmurphy/libgnunetworker/issues
+  [2]: INSTALL
+  [3]: COPYING
+
