@@ -3,15 +3,17 @@
 LTVERSIONINFO = $(INTERFACE_NUM):$(IMPLEMENTATION_NUM):$(INTERFACES_SUPPORTED)
 
 AM_CPPFLAGS = \
-	"-DPACKAGE_LOCALE_DIR=\"$(localedir)\"" \
-	"-DPACKAGE_SRC_DIR=\"$(srcdir)\"" \
-	"-DPACKAGE_DATA_DIR=\"$(pkgdatadir)\"" \
-	"-DG_LOG_DOMAIN=\"GNUnetWorker\""
+	'-I$(top_srcdir)/include' \
+	'-DPACKAGE_LOCALE_DIR="$(localedir)"' \
+	'-DPACKAGE_SRC_DIR="$(srcdir)"' \
+	'-DPACKAGE_DATA_DIR="$(pkgdatadir)"'
 
 AM_CFLAGS = \
 	-Wall\
-	-g \
 	-pedantic \
+	-g \
+	-O2 \
+	-std=c11 \
 	$(WARN_CFLAGS) \
 	$(GNUNET_CFLAGS) \
 	$(GNUNET_WORKER_CFLAGS)
@@ -20,7 +22,7 @@ lib_LTLIBRARIES = \
 	lib@PROJECT_NAME@.la
 
 lib@PROJECT_NAME@_la_SOURCES = \
-	gnunet_worker_lib.h \
+	requirement.h \
 	worker.c \
 	worker.h
 
@@ -29,11 +31,6 @@ lib@PROJECT_NAME@_la_LDFLAGS = \
 
 lib@PROJECT_NAME@_la_LIBADD = \
 	$(GNUNET_WORKER_LIBS)
-
-otherincludedir = $(includedir)/gnunet
-
-otherinclude_HEADERS = \
-	gnunet_worker_lib.h
 
 pkgconfig_DATA = \
 	@PROJECT_NAME@.pc

@@ -5,7 +5,7 @@ m4_include([autostuff/m4/not-autotools.m4])
 AC_PREREQ([2.69])
 
 AC_INIT([GNUnet Worker],
-	[0.1.0],
+	[0.2.0],
 	[madmurphy333@gmail.com],
 	[lib]n4_mem([GL_PROJECT_NAME], [gnunetworker]),
 	[https://github.com/madmurphy/libgnunetworker])
@@ -24,8 +24,6 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
 
 AC_CONFIG_SRCDIR([src/worker.c])
-
-AC_CONFIG_HEADERS([config.h])
 
 AC_CONFIG_FILES([Makefile
 src/Makefile
@@ -82,6 +80,8 @@ AM_COND_IF([NLS_ENABLED], [
 	AC_DEFINE_UNQUOTED([GETTEXT_PACKAGE],
 		["${GETTEXT_PACKAGE}"], [GETTEXT package name])
 ])
+
+AM_CONDITIONAL([DOC_IS_GENERATED], [test -d 'docs'])
 
 AC_SUBST([PROJECT_NAME], GL_PROJECT_NAME)
 

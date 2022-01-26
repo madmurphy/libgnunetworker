@@ -20,6 +20,9 @@ static const char * const thread_names[] = {
 };
 
 
+#define NUM_THREADS (sizeof(thread_names) / sizeof(char *))
+
+
 /*  Shared data between threads  */
 static ThreadData my_thread_data[sizeof(thread_names) / sizeof(char *)];
 
@@ -59,8 +62,15 @@ int main (const int argc, const char * const * const argv) {
 		NULL
 	);
 
+	if (!my_current_worker) {
+
+		fprintf(stderr, "Sorry, something went wrong :-(\n");
+		return 1;
+
+	}
+
 	/*  Create one thread for each member of the `thread_names` array  */
-	for (size_t idx = 0; idx < sizeof(thread_names) / sizeof(char *); idx++) {
+	for (size_t idx = 0; idx < NUM_THREADS; idx++) {
 
 		my_thread_data[idx].name = thread_names[idx];
 		my_thread_data[idx].worker = my_current_worker;
@@ -75,6 +85,13 @@ int main (const int argc, const char * const * const argv) {
 
 	/*  Make sure that all the threads have had enough time to start...  */
 	sleep(1);
+
+	/*  Create one thread for each member of the `thread_names` array  */
+	for (
+		size_t idx = 0;
+			idx < NUM_THREADS;
+		pthread_join(my_thread_data[idx++].thread, NULL)
+	);
 
 	/*  Shutdown the scheduler  */
 	GNUNET_WORKER_synch_destroy(my_current_worker);

@@ -2,7 +2,7 @@
 
 /*\
 |*|
-|*| foobar/src/foobar-gnunet.c
+|*| foobar-gnunet.c
 |*|
 |*| https://gitlab.com/authors/foobar
 |*|
@@ -26,9 +26,9 @@
 
 /**
 
-	@file		foobar-gnunet.c
-	@brief		Functions for the GNUnet thread; every time we want to signal
-				the GTK thread we use `g_idle_add()`.
+	@file       foobar-gnunet.c
+	@brief      Functions for the GNUnet thread; every time we want to signal
+	            the GTK thread we use `g_idle_add()`.
 
 **/
 
@@ -44,13 +44,17 @@
 
 
 /**
-	@brief      The file sharing handle
+
+	@brief      The filesharing handle
+
 **/
 static struct GNUNET_FS_Handle * fs_handle;
 
 
 /**
+
 	@brief      The indexed context
+
 **/
 static struct GNUNET_FS_GetIndexedContext * indexed_context;
 
@@ -69,7 +73,7 @@ void clear_query_context (
 
 	g_clear_pointer(&indexed_context, GNUNET_FS_get_indexed_files_cancel);
 	g_clear_pointer(&fs_handle, GNUNET_FS_stop);
-	fprintf(stderr, "The worker thread has returned\n");
+	fprintf(stderr, "The GNUnet worker has terminated\n");
 
 }
 
@@ -193,7 +197,7 @@ void cancel_indexed_query (
 /**
 
 	@brief      First function automatically invoked when the scheduler is
-				launched
+	            launched
 	@param      v_app_data      The data shared between threads, passed as a
 	                            `void *` pointer
 	@return     `1` if the scheduler must stay alive, `0` if it must shut down
@@ -217,6 +221,12 @@ bool fs_service_start_check (
 	if (!fs_handle) {
 
 		/*  The worker will shut down!  */
+
+		fprintf(
+			stderr,
+			"Unable to interrogate the filesharing service - abort"
+		);
+
 		return false;
 
 	}

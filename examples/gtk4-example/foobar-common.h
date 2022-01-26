@@ -2,7 +2,7 @@
 
 /*\
 |*|
-|*| foobar/src/foobar-common.h
+|*| foobar-common.h
 |*|
 |*| https://gitlab.com/authors/foobar
 |*|
@@ -26,8 +26,8 @@
 
 /**
 
-	@file		foobar-common.h
-	@brief		Functions and data types shared among all Foobar's modules
+	@file       foobar-common.h
+	@brief      Functions and data types shared among all Foobar's modules
 
 **/
 
@@ -41,7 +41,9 @@
 
 
 /**
+
 	@brief      Possible states of a query
+
 **/
 enum QueryState {
 	QUERY_OFF,
@@ -52,7 +54,9 @@ enum QueryState {
 
 
 /**
+
 	@brief      The data shared between threads
+
 **/
 typedef struct AppData_T {
 	int argc;

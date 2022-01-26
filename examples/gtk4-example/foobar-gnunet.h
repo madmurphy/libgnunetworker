@@ -2,7 +2,7 @@
 
 /*\
 |*|
-|*| foobar/src/foobar-gnunet.h
+|*| foobar-gnunet.h
 |*|
 |*| https://gitlab.com/authors/foobar
 |*|
@@ -26,8 +26,8 @@
 
 /**
 
-	@file		foobar-gnunet.h
-	@brief		Public functions and data types of `foobar-gnunet.c`
+	@file       foobar-gnunet.h
+	@brief      Public functions and data types of `foobar-gnunet.c`
 
 **/
 

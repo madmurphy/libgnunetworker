@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: libgnunetworker 0.1.0\n"
+"Project-Id-Version: libgnunetworker 0.2.0\n"
 "Report-Msgid-Bugs-To: madmurphy333@gmail.com\n"
-"POT-Creation-Date: 2022-01-24 10:17+0000\n"
-"PO-Revision-Date: 2022-01-24 10:17+0000\n"
+"POT-Creation-Date: 2022-01-25 19:11+0000\n"
+"PO-Revision-Date: 2022-01-25 19:11+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Italian <tp@lists.linux.it>\n"
 "Language: it\n"
@@ -17,93 +17,51 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/worker.c:302
-msgid "Unable to read the notification\n"
-msgstr "Impossibile leggere la notifica\n"
+#: src/worker.c:310
+msgid "Unable to read the notification sent to the worker thread\n"
+msgstr "Impossibile leggere la notifica inviata al worker thread\n"
 
 #: src/worker.c:462
 msgid "The scheduler has returned unexpectedly\n"
 msgstr "Lo scheduler è ritornato inaspettatamente\n"
 
-#: src/worker.c:530
-msgid "Error allocating memory for the worker\n"
-msgstr "Errore nell'allocare memoria per il worker\n"
-
-#: src/worker.c:559
-msgid "Unable to open a file descriptor for communicating with the worker\n"
-msgstr "Impossibile aprire un file descriptor per comunicare con il worker\n"
-
-#: src/worker.c:608 src/worker.c:671 src/worker.c:733 src/worker.c:869
+#: src/worker.c:598 src/worker.c:667 src/worker.c:732 src/worker.c:875
 msgid "Double free detected\n"
 msgstr "Tentativo di doppio free rilevato\n"
 
-#: src/worker.c:795
+#: src/worker.c:800 src/worker.c:838 src/worker.c:943 src/worker.c:993
 #, c-format
 msgid ""
-"`pthread_join()` has returned `%d`, possibly due to a bug in the GNUnet "
-"Worker module\n"
+"`%s` has returned `%d`, possibly due to a bug in the GNUnet Worker module\n"
 msgstr ""
-"`pthread_join()` ha restituito `%d`, possibilmente a causa di un bug nel "
-"modulo GNUnet Worker\n"
+"`%s` ha restituito `%d`, possibilmente a causa di un bug nel modulo GNUnet "
+"Worker\n"
 
-#: src/worker.c:809 src/worker.c:948
+#: src/worker.c:815 src/worker.c:853 src/worker.c:962 src/worker.c:1008
 #, c-format
-msgid "`pthread_join()` has returned `%d` (unknown code)\n"
-msgstr "`pthread_join()` ha restituito `%d` (codice sconosciuto)\n"
+msgid "`%s` has returned `%d` (unknown code)\n"
+msgstr "`%s` ha restituito `%d` (codice sconosciuto)\n"
 
-#: src/worker.c:834
-#, c-format
+#: src/worker.c:1128 src/worker.c:1277
+msgid "Error allocating memory for the worker\n"
+msgstr "Errore nell'allocare memoria per il worker\n"
+
+#: src/worker.c:1138 src/worker.c:1287
+msgid "Unable to open a file descriptor for communicating with the worker\n"
+msgstr "Impossibile aprire un file descriptor per comunicare con il worker\n"
+
+#: src/worker.c:1160
+msgid "Unable to start a new thread for the worker\n"
+msgstr "Impossibile avviare un nuovo thread per il worker\n"
+
+#: src/worker.c:1229
+msgid "Unable to start a new thread for the master\n"
+msgstr "Impossibile avviare un nuovo thread per il master\n"
+
+#: src/worker.c:1253
 msgid ""
-"`pthread_cond_wait()` has returned `%d`, possibly due to a bug in the GNUnet "
-"Worker module\n"
+"The current scheduler is already serving as a worker; no changes have been "
+"made\n"
 msgstr ""
-"`pthread_cond_wait()` ha restituito `%d`, possibilmente a causa di un bug "
-"nel modulo GNUnet Worker\n"
-
-#: src/worker.c:848
-#, c-format
-msgid "`pthread_cond_wait()` has returned `%d` (unknown code)\n"
-msgstr "`pthread_cond_wait()` ha restituito `%d` (codice sconosciuto)\n"
-
-#: src/worker.c:931
-#, c-format
-msgid ""
-"`pthread_timedjoin_np()` has returned `%d`, possibly due to a bug in the "
-"GNUnet Worker module\n"
-msgstr ""
-"`pthread_timedjoin_np()` ha restituito `%d`, possibilmente a causa di un bug "
-"nel modulo GNUnet Worker\n"
-
-#: src/worker.c:976
-#, c-format
-msgid ""
-"`pthread_cond_timedwait()` has returned `%d`, possibly due to a bug in the "
-"GNUnet Worker module\n"
-msgstr ""
-"`pthread_cond_timedwait()` ha restituito `%d`, possibilmente a causa di un "
-"bug nel modulo GNUnet Worker\n"
-
-#: src/worker.c:990
-#, c-format
-msgid "`pthread_cond_timedwait()` has returned `%d` (unknown code)\n"
-msgstr "`pthread_cond_timedwait()` ha restituito `%d` (codice sconosciuto)\n"
-
-#: src/worker.c:1119
-msgid "Unable to start a new thread\n"
-msgstr "Impossibile avviare un nuovo thread\n"
-
-#: src/worker.c:1144
-msgid ""
-"`GNUNET_WORKER_start_serving()` has been invoked from a thread that is "
-"already serving as a worker\n"
-msgstr ""
-"`GNUNET_WORKER_start_serving()` è stato invocato da un thread che sta già "
-"servendo come worker\n"
-
-#: src/worker.c:1216
-msgid ""
-"The current scheduler is already serving as a worker; the worker's data will "
-"not be changed\n"
-msgstr ""
-"Lo scheduler corrente sta già servendo come worker; i dati associati al "
-"worker non verranno modificati\n"
+"Lo scheduler corrente sta già servendo come worker; nessun cambiamento è "
+"stato apportato\n"

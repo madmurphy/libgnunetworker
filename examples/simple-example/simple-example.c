@@ -18,6 +18,13 @@ int main (const int argc, const char * const * const argv) {
 		NULL
 	);
 
+	if (!my_current_worker) {
+
+		fprintf(stderr, "Sorry, something went wrong :-(\n");
+		return 1;
+
+	}
+
 	/*  Run a function in the scheduler's thread  */
 	GNUNET_WORKER_push_load(
 		my_current_worker,

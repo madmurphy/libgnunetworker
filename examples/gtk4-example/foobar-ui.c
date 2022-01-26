@@ -2,7 +2,7 @@
 
 /*\
 |*|
-|*| foobar/src/foobar-ui.c
+|*| foobar-ui.c
 |*|
 |*| https://gitlab.com/authors/foobar
 |*|
@@ -26,9 +26,9 @@
 
 /**
 
-	@file		foobar-ui.c
-	@brief		Functions for the GTK thread; every time we want to signal the
-				GNUnet thread we use `GNUNET_WORKER_push_load()`.
+	@file       foobar-ui.c
+	@brief      Functions for the GTK thread; every time we want to signal the
+	            GNUnet thread we use `GNUNET_WORKER_push_load()`.
 
 **/
 
@@ -47,19 +47,23 @@
 
 
 /**
+
 	@brief      The data type that holds the private UI data
+
 **/
 typedef struct UISession_T {
 	AppData * app_data;
 	GNUNET_WORKER_Handle * gnunet_worker;
 	GtkListStore * list_store;
-	GtkButton * query_btn;
-	GtkButton * reset_btn;
+	GtkButton * query_button;
+	GtkButton * reset_button;
 } UISession;
 
 
 /**
+
 	@brief      Just a reminder for the published files `GtkListStore`
+
 **/
 enum {
 	PF_COL_PATHS = 0,
@@ -88,25 +92,25 @@ gboolean query_callback_idle (
 
 		case QUERY_RUNNING:
 
-			gtk_button_set_label(ui_data->query_btn, _(CANCEL_TEXT));
+			gtk_button_set_label(ui_data->query_button, CANCEL_TEXT);
 			break;
 
 		case QUERY_OFF:
 
-			gtk_button_set_label(ui_data->query_btn, _(QUERY_TEXT));
+			gtk_button_set_label(ui_data->query_button, QUERY_TEXT);
 			break;
 
 		case QUERY_FAILED:
 
 			fprintf(stderr, "GNUNET_FS_get_indexed_files() error\n");
-			gtk_button_set_label(ui_data->query_btn, "Cerca XX");
+			gtk_button_set_label(ui_data->query_button, "Cerca XX");
 			break;
 
 		case QUERY_COMPLETED: {
 
 			GtkTreeIter iter;
 
-			gtk_button_set_label(ui_data->query_btn, _(QUERY_TEXT));
+			gtk_button_set_label(ui_data->query_button, QUERY_TEXT);
 			gtk_list_store_clear(ui_data->list_store);
 
 			for (
@@ -127,7 +131,7 @@ gboolean query_callback_idle (
 			}
 
 			gtk_widget_set_visible(
-				GTK_WIDGET(ui_data->reset_btn),
+				GTK_WIDGET(ui_data->reset_button),
 				ui_data->app_data->fs_query.paths != NULL
 			);
 
@@ -146,36 +150,36 @@ gboolean query_callback_idle (
 /**
 
 	@brief      Callback function for the `"List published files"` button
-	@param      query_button    The `"List published files"` button
+	@param      button          The `"List published files"` button
 	@param      v_ui_data       The private UI data, passed as a `void *`
 	                            pointer
 	@return     Nothing
 
 **/
 static void on_list_files_clicked (
-	GtkWidget * const query_button,
-	gpointer v_ui_data
+	GtkWidget * const button,
+	gpointer v_app_data
 ) {
 
-	#define ui_data ((UISession *) v_ui_data)
+	#define app_data ((AppData *) v_app_data)
 
-	g_mutex_lock(&ui_data->app_data->fs_query.indexed_mutex);
+	g_mutex_lock(&app_data->fs_query.indexed_mutex);
 
 	const bool b_must_cancel =
-		ui_data->app_data->fs_query.state == QUERY_RUNNING;
+		app_data->fs_query.state == QUERY_RUNNING;
 
-	g_mutex_unlock(&ui_data->app_data->fs_query.indexed_mutex);
+	g_mutex_unlock(&app_data->fs_query.indexed_mutex);
 
 	GNUNET_WORKER_push_load(
-		ui_data->gnunet_worker,
+		app_data->gnunet_worker,
 		b_must_cancel ?
 			&cancel_indexed_query
 		:
 			&query_indexed_files,
-		ui_data->app_data
+		app_data
 	);
 
-	#undef ui_data
+	#undef app_data
 
 }
 
@@ -183,21 +187,21 @@ static void on_list_files_clicked (
 /**
 
 	@brief      Callback function for the `"Clear"` button
-	@param      clear_button    The `"Clear"` button
+	@param      clear_btn       The `"Clear"` button
 	@param      v_ui_data       The private UI data, passed as a `void *`
 	                            pointer
 	@return     Nothing
 
 **/
 static void on_clear_list_clicked (
-	GtkWidget * const clear_button,
+	GtkWidget * const clear_btn,
 	gpointer v_ui_data
 ) {
 
 	#define ui_data ((UISession *) v_ui_data)
 
 	gtk_list_store_clear(ui_data->list_store);
-	gtk_widget_set_visible(clear_button, false);
+	gtk_widget_set_visible(clear_btn, false);
 
 	#undef ui_data
 
@@ -221,8 +225,8 @@ static void on_foobar_app_activate (
 	#define ui_data ((UISession *) v_ui_data)
 
 	ui_data->list_store = gtk_list_store_new(PF_NUM_COLS, G_TYPE_STRING);
-	ui_data->query_btn = GTK_BUTTON(gtk_button_new_with_label(_(QUERY_TEXT)));
-	ui_data->reset_btn = GTK_BUTTON(gtk_button_new_with_label(_(CLEAR_TEXT)));
+	ui_data->query_button = GTK_BUTTON(gtk_button_new_with_label(QUERY_TEXT));
+	ui_data->reset_button = GTK_BUTTON(gtk_button_new_with_label(CLEAR_TEXT));
 
 	GtkWidget
 		* const window = gtk_application_window_new(app),
@@ -236,28 +240,28 @@ static void on_foobar_app_activate (
 	GtkTreeViewColumn * const col = gtk_tree_view_column_new();
 	GtkCellRenderer * const rend = gtk_cell_renderer_text_new();
 
-	gtk_widget_set_visible(GTK_WIDGET(ui_data->reset_btn), false);
+	gtk_widget_set_visible(GTK_WIDGET(ui_data->reset_button), false);
 
 	gtk_header_bar_set_title_widget(
 		GTK_HEADER_BAR(header),
-		gtk_label_new(_("Files published via GNUnet"))
+		gtk_label_new("Files published via GNUnet")
 	);
 
 	gtk_header_bar_pack_start(
 		GTK_HEADER_BAR(header),
-		GTK_WIDGET(ui_data->query_btn)
+		GTK_WIDGET(ui_data->query_button)
 	);
 
 	gtk_header_bar_pack_start(
 		GTK_HEADER_BAR(header),
-		GTK_WIDGET(ui_data->reset_btn)
+		GTK_WIDGET(ui_data->reset_button)
 	);
 
 	gtk_window_set_titlebar(GTK_WINDOW(window), header);
 	gtk_window_set_default_size(GTK_WINDOW(window), 800, 400);
 	gtk_widget_set_halign(box, GTK_ALIGN_START);
 	gtk_widget_set_valign(box, GTK_ALIGN_START);
-	gtk_tree_view_column_set_title(col, _("Paths"));
+	gtk_tree_view_column_set_title(col, "Path");
 	gtk_tree_view_column_pack_start(col, rend, true);
 	gtk_tree_view_column_set_attributes(col, rend, "text", PF_COL_PATHS, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(tree), col);
@@ -287,14 +291,14 @@ static void on_foobar_app_activate (
 	gtk_window_set_child(GTK_WINDOW(window), box);
 
 	g_signal_connect(
-		ui_data->query_btn,
+		ui_data->query_button,
 		"clicked",
 		G_CALLBACK(on_list_files_clicked),
-		ui_data
+		ui_data->app_data
 	);
 
 	g_signal_connect(
-		ui_data->reset_btn,
+		ui_data->reset_button,
 		"clicked",
 		G_CALLBACK(on_clear_list_clicked),
 		ui_data
@@ -321,12 +325,12 @@ void gtk_main_with_gnunet_worker (
     gpointer v_app_data
 ) {
 
-	#define _app_data ((AppData *) v_app_data)
+	#define shared_data ((AppData *) v_app_data)
 
 	UISession * ui_data = g_new(UISession, 1);
 	ui_data->gnunet_worker = gnunet_worker;
 	ui_data->app_data = (AppData *) v_app_data;
-	_app_data->ui_private = ui_data;
+	shared_data->ui_private = ui_data;
 
 	GtkApplication * app = gtk_application_new(
 		"org.gtk.foobar",
@@ -340,17 +344,18 @@ void gtk_main_with_gnunet_worker (
 		ui_data
 	);
 
-	_app_data->gtk_status = g_application_run(
+	shared_data->gtk_status = g_application_run(
 		G_APPLICATION(app),
-		_app_data->argc,
-		(char **) _app_data->argv
+		shared_data->argc,
+		(char **) shared_data->argv
 	);
 
 	g_object_unref(app);
-	GNUNET_WORKER_asynch_destroy(gnunet_worker);
+	GNUNET_WORKER_synch_destroy(gnunet_worker);
 	g_free(ui_data);
+	printf("The GTK app has terminated\n");
 
-	#undef _app_data
+	#undef shared_data
 
 }
 

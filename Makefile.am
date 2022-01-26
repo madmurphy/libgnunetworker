@@ -25,6 +25,20 @@ EXTRA_DIST = \
 	.editorconfig
 
 
+if DOC_IS_GENERATED
+
+EXTRA_DIST += \
+	docs
+
+endif DOC_IS_GENERATED
+
+
+gnunetincludedir = $(includedir)/gnunet
+
+gnunetinclude_HEADERS = \
+	include/gnunet_worker_lib.h
+
+
 if NLS_ENABLED
 
 SUBDIRS += \
@@ -107,7 +121,8 @@ distclean-local:
 i18n-update:
 	$(MKDIR_P) 'po/backups' && $(GREP) -o '^\s*\w\S\+' 'po/LINGUAS' | \
 	while read _i_; do cp "po/$${_i_}.po" "po/backups/$${_i_}.po.bak" && \
-	(! test -e "po/@PACKAGE_TARNAME@.pot" || mv "po/@PACKAGE_TARNAME@.pot" "po/backups/@PACKAGE_TARNAME@.pot.bak") \
+	(! test -e "po/@PACKAGE_TARNAME@.pot" || mv \
+	"po/@PACKAGE_TARNAME@.pot" "po/backups/@PACKAGE_TARNAME@.pot.bak") \
 	&& $(MAKE) -C 'po' "$${_i_}.po" && sed -i \
 	's/"Project-Id-Version:.*$$/"Project-Id-Version: @PACKAGE_TARNAME@ @PACKAGE_VERSION@\\n"/' \
 	"po/$${_i_}.po"; done;
@@ -116,7 +131,8 @@ i18n-update:
 # Generate the documentation
 .PHONY: docs
 docs:
-	$(MKDIR_P) 'docs' && doxygen 'autostuff/doxygen/doxyfile.conf';
+	$(MKDIR_P) 'docs' && doxygen 'autostuff/doxygen/doxyfile.conf' && cp \
+	'autostuff/chunks/docs.index.html.in' 'docs/index.html';
 
 
 # Make the source directory depend on Autotools and a `bootstrap` script

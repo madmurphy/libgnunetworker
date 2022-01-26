@@ -2,7 +2,7 @@
 
 /*\
 |*|
-|*| foobar/src/foobar-main.c
+|*| foobar-main.c
 |*|
 |*| https://gitlab.com/authors/foobar
 |*|
@@ -26,8 +26,8 @@
 
 /**
 
-	@file		foobar-main.c
-	@brief		Foobar's `main()` function
+	@file       foobar-main.c
+	@brief      Foobar's `main()` function
 
 **/
 
@@ -53,7 +53,9 @@
 
 
 /**
+
 	@brief      This structure holds informations about the project
+
 **/
 static const struct GNUNET_OS_ProjectData foobar_pd = {
 	.libname = "libfoobar",
@@ -61,15 +63,15 @@ static const struct GNUNET_OS_ProjectData foobar_pd = {
 	.binary_name = "foobar",
 	.env_varname = "FOOBAR_PREFIX",
 	.base_config_varname = "FOOBAR_BASE_CONFIG",
-	.bug_email = "developers@example.com",
-	.homepage = "http://www.example.com/",
+	.bug_email = "developers@foobar.org",
+	.homepage = "http://www.foobar.org/",
 	.config_file = "foobar.conf",
 	.user_config_file = "~/.config/foobar.conf",
 	.version = "0.1",
 	.is_gnu = 1,
 	.gettext_domain = GETTEXT_PACKAGE,
 	.gettext_path = NULL,
-	.agpl_url = "http://www.example.com/COPYING",
+	.agpl_url = "http://www.foobar.org/COPYING",
 };
 
 
@@ -94,15 +96,15 @@ static void foobar_main (
 
 	#define app_data ((AppData *) v_app_data)
 
-	register int idx = 0;
+	register int argc = 0;
 
-	while (args[idx]) {
+	while (args[argc]) {
 
-		idx++;
+		argc++;
 
 	}
 
-	app_data->argc = idx;
+	app_data->argc = argc;
 	app_data->argv = (const char * const *) args;
 	app_data->cfg_path = cfg_path;
 	app_data->gnunet_config = config;
@@ -121,8 +123,8 @@ static void foobar_main (
 	For no particular reason we decided to run the GNUnet scheduler in the main
 	thread and the GTK event loop in another thread. If you want to swap the
 	two and run the GTK application in the main thread instead, remove the
-	previous `GNUNET_WORKER_start_serving()` invocation and uncomment the
-	following two instructions.
+	previous invocation of `GNUNET_WORKER_start_serving()` and uncomment the
+	following lines:
 
 	*/
 
@@ -134,7 +136,11 @@ static void foobar_main (
 		v_app_data
 	);
 
-	gtk_main_with_gnunet_worker(app_data->gnunet_worker, v_app_data);
+	if (app_data->gnunet_worker) {
+
+		gtk_main_with_gnunet_worker(app_data->gnunet_worker, v_app_data);
+
+	}
 
 	*/
 

@@ -2,7 +2,7 @@
 
 /*\
 |*|
-|*| foobar/src/foobar-ui.h
+|*| foobar-ui.h
 |*|
 |*| https://gitlab.com/authors/foobar
 |*|
@@ -26,8 +26,8 @@
 
 /**
 
-	@file		foobar-ui.h
-	@brief		Public functions and data types of `foobar-ui.c`
+	@file       foobar-ui.h
+	@brief      Public functions and data types of `foobar-ui.c`
 
 **/
 
