@@ -36,6 +36,7 @@
 #define __FOOBAR_COMMON_H__
 
 
+#include <stdatomic.h>
 #include <gtk/gtk.h>
 #include <gnunet/gnunet_worker_lib.h>
 
@@ -71,6 +72,9 @@ typedef struct AppData_T {
 	const struct GNUNET_CONFIGURATION_Handle * gnunet_config;
     GNUNET_WORKER_Handle * gnunet_worker;
 	gpointer ui_private;
+	GtkApplication * ui_app;
+	atomic_bool worker_is_running;
+	atomic_bool ui_is_running;
 } AppData;
 
 

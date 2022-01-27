@@ -2,6 +2,28 @@ Change Log
 ==========
 
 
+## 0.3.0 (2022-01-27)
+
+Changes:
+
+* The interface has changed in respect to worker creation. All the three
+  functions `GNUNET_WORKER_create()`, `GNUNET_WORKER_start_serving()`,
+  `GNUNET_WORKER_adopt_running_scheduler()` now return error codes, while the
+  handle for the allocated worker is passed via placeholder argument. **This
+  breaks binary compatibility with previous versions**. Using error codes has
+  allowed to remove several log messages, which now will be up to the user.
+* Support for a `master_routine` argument has been added to
+  `GNUNET_WORKER_adopt_running_scheduler()` (again, binary compatibility break)
+* The † `GNUNET_WorkerHandlerRoutine` data type has been renamed to
+  `GNUNET_WORKER_MasterRoutine`
+* A new `GNUNET_WORKER_ERR_NOT_ALONE` error code can now be returned by
+  `GNUNET_WORKER_synch_destroy()` and `GNUNET_WORKER_timedsynch_destroy()`
+* The role of the `on_worker_end` routine has been defined more strictly
+* General code review in the implementation
+* Documentation
+* Examples
+
+
 ## 0.2.0 (2022-01-26)
 
 Changes:

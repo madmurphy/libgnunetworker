@@ -108,14 +108,16 @@ static void foobar_main (
 	app_data->argv = (const char * const *) args;
 	app_data->cfg_path = cfg_path;
 	app_data->gnunet_config = config;
+	app_data->worker_is_running = false;
+	app_data->ui_is_running = false;
 	g_mutex_init(&app_data->fs_query.indexed_mutex);
 
 	GNUNET_WORKER_start_serving(
+		&app_data->gnunet_worker,
 		&gtk_main_with_gnunet_worker,
 		&fs_service_start_check,
 		&clear_query_context,
-		v_app_data,
-		&app_data->gnunet_worker
+		v_app_data
 	);
 
 	/*
@@ -130,13 +132,14 @@ static void foobar_main (
 
 	/*
 
-	app_data->gnunet_worker = GNUNET_WORKER_create(
-		&fs_service_start_check,
-		&clear_query_context,
-		v_app_data
-	);
-
-	if (app_data->gnunet_worker) {
+	if (
+		!GNUNET_WORKER_create(
+			&app_data->gnunet_worker,
+			&fs_service_start_check,
+			&clear_query_context,
+			v_app_data
+		)
+	) {
 
 		gtk_main_with_gnunet_worker(app_data->gnunet_worker, v_app_data);
 
@@ -176,8 +179,8 @@ int main (
 
 	GNUNET_OS_init(&foobar_pd);
 
-	/*  We use `GNUNET_PROGRAM_run2` with `GNUNET_YES` as last argument to
-		avoid that GNUnet's scheduler is automatically started  */
+	/*  **IMPORTANT** We use `GNUNET_PROGRAM_run2` with `GNUNET_YES` as last
+		argument to avoid that GNUnet's scheduler is automatically started  */
 
 	return
 		GNUNET_PROGRAM_run2(

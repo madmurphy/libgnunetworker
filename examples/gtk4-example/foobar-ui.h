@@ -40,6 +40,11 @@
 #include <gnunet/gnunet_worker_lib.h>
 
 
+extern gboolean ui_quit_idle (
+	gpointer v_ui_data
+);
+
+
 extern gboolean query_callback_idle (
 	gpointer v_ui_data
 );

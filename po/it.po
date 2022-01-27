@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: libgnunetworker 0.2.0\n"
+"Project-Id-Version: libgnunetworker 0.3.0\n"
 "Report-Msgid-Bugs-To: madmurphy333@gmail.com\n"
-"POT-Creation-Date: 2022-01-25 19:11+0000\n"
-"PO-Revision-Date: 2022-01-25 19:11+0000\n"
+"POT-Creation-Date: 2022-01-27 16:02+0000\n"
+"PO-Revision-Date: 2022-01-27 16:02+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Italian <tp@lists.linux.it>\n"
 "Language: it\n"
@@ -17,19 +17,19 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/worker.c:310
+#: src/worker.c:339
 msgid "Unable to read the notification sent to the worker thread\n"
 msgstr "Impossibile leggere la notifica inviata al worker thread\n"
 
-#: src/worker.c:462
+#: src/worker.c:515
 msgid "The scheduler has returned unexpectedly\n"
 msgstr "Lo scheduler è ritornato inaspettatamente\n"
 
-#: src/worker.c:598 src/worker.c:667 src/worker.c:732 src/worker.c:875
+#: src/worker.c:648 src/worker.c:747 src/worker.c:845 src/worker.c:1022
 msgid "Double free detected\n"
 msgstr "Tentativo di doppio free rilevato\n"
 
-#: src/worker.c:800 src/worker.c:838 src/worker.c:943 src/worker.c:993
+#: src/worker.c:923 src/worker.c:961 src/worker.c:1100 src/worker.c:1150
 #, c-format
 msgid ""
 "`%s` has returned `%d`, possibly due to a bug in the GNUnet Worker module\n"
@@ -37,31 +37,11 @@ msgstr ""
 "`%s` ha restituito `%d`, possibilmente a causa di un bug nel modulo GNUnet "
 "Worker\n"
 
-#: src/worker.c:815 src/worker.c:853 src/worker.c:962 src/worker.c:1008
+#: src/worker.c:938 src/worker.c:976 src/worker.c:1119 src/worker.c:1165
 #, c-format
 msgid "`%s` has returned `%d` (unknown code)\n"
 msgstr "`%s` ha restituito `%d` (codice sconosciuto)\n"
 
-#: src/worker.c:1128 src/worker.c:1277
-msgid "Error allocating memory for the worker\n"
-msgstr "Errore nell'allocare memoria per il worker\n"
-
-#: src/worker.c:1138 src/worker.c:1287
-msgid "Unable to open a file descriptor for communicating with the worker\n"
-msgstr "Impossibile aprire un file descriptor per comunicare con il worker\n"
-
-#: src/worker.c:1160
-msgid "Unable to start a new thread for the worker\n"
-msgstr "Impossibile avviare un nuovo thread per il worker\n"
-
-#: src/worker.c:1229
-msgid "Unable to start a new thread for the master\n"
-msgstr "Impossibile avviare un nuovo thread per il master\n"
-
-#: src/worker.c:1253
-msgid ""
-"The current scheduler is already serving as a worker; no changes have been "
-"made\n"
-msgstr ""
-"Lo scheduler corrente sta già servendo come worker; nessun cambiamento è "
-"stato apportato\n"
+#: src/worker.c:1219
+msgid "Detected attempt to push load into a destroyed worker\n"
+msgstr "Rilevato tentativo di aggiungere carico a un worker già distrutto\n"

@@ -34,6 +34,7 @@
 
 
 #include <stdbool.h>
+#include <stdatomic.h>
 #include <gtk/gtk.h>
 #include <gnunet/gnunet_worker_lib.h>
 #include "foobar-common.h"
@@ -69,6 +70,24 @@ enum {
 	PF_COL_PATHS = 0,
 	PF_NUM_COLS
 };
+
+
+/**
+
+	@brief      Function invoked by the worker thread via `g_idle_add()` to
+	            quit the UI
+	@param      v_ui_app        The application
+	@return     Always `false`
+
+**/
+gboolean ui_quit_idle (
+	gpointer v_ui_app
+) {
+
+	g_application_quit(G_APPLICATION(v_ui_app));
+	return false;
+
+}
 
 
 /**
@@ -332,28 +351,37 @@ void gtk_main_with_gnunet_worker (
 	ui_data->app_data = (AppData *) v_app_data;
 	shared_data->ui_private = ui_data;
 
-	GtkApplication * app = gtk_application_new(
+	shared_data->ui_app = gtk_application_new(
 		"org.gtk.foobar",
 		G_APPLICATION_FLAGS_NONE
 	);
 
 	g_signal_connect(
-		app,
+		shared_data->ui_app,
 		"activate",
 		G_CALLBACK(on_foobar_app_activate),
 		ui_data
 	);
 
+	atomic_store(&shared_data->ui_is_running, true);
+
 	shared_data->gtk_status = g_application_run(
-		G_APPLICATION(app),
+		G_APPLICATION(shared_data->ui_app),
 		shared_data->argc,
 		(char **) shared_data->argv
 	);
 
-	g_object_unref(app);
-	GNUNET_WORKER_synch_destroy(gnunet_worker);
+	atomic_store(&shared_data->ui_is_running, false);
 	g_free(ui_data);
-	printf("The GTK app has terminated\n");
+
+	if (atomic_load(&shared_data->worker_is_running)) {
+
+		GNUNET_WORKER_synch_destroy(gnunet_worker);
+
+	}
+
+	g_object_unref(shared_data->ui_app);
+	printf("The GTK app has returned\n");
 
 	#undef shared_data
 

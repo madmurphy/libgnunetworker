@@ -63,6 +63,7 @@ _distclean_dirs_ = \
 _bootstrapclean_dirs_ = \
 	'autom4te.cache' \
 	'build-aux' \
+	'docs' \
 	'm4'
 
 # Shell expansion is supported here

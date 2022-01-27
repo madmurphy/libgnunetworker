@@ -16,7 +16,7 @@ To accomplish its event-driven flow, **GNUnet** uses a scheduler. Once such
 scheduler is started, it is not designed to be invoked by other threads, but
 can schedule only routines requested by its own thread. What to do then if an
 application needs to deal with multiple threads and let the latter interface
-with the **GNUnet** scheduler?
+with **GNUnet**'s scheduler?
 
 This framework offers a simple solution by creating a “bearing” between the
 threads and the scheduler. The latter is run in its own dedicated thread and is
@@ -56,28 +56,30 @@ static void task_for_the_scheduler (void * const data) {
 
 int main (const int argc, const char * const * const argv) {
 
-    /*  Create a separate thread where GNUnet's scheduler is run  */
-    GNUNET_WORKER_Handle * my_current_worker = GNUNET_WORKER_create(
-        NULL,
-        NULL,
-        NULL
-    );
+    GNUNET_WORKER_Handle * my_current_worker;
 
-    if (!my_current_worker) {
+    /*  Create a separate thread where GNUnet's scheduler is run  */
+    if (GNUNET_WORKER_create(&my_current_worker, NULL, NULL, NULL)) {
 
         fprintf(stderr, "Sorry, something went wrong :-(\n");
         return 1;
 
-    }
+    };
 
     /*  Run a function in the scheduler's thread  */
-    GNUNET_WORKER_push_load(my_current_worker, &task_for_the_scheduler, NULL);
+    GNUNET_WORKER_push_load(
+        my_current_worker,
+        &task_for_the_scheduler,
+        NULL
+    );
 
     /*  Make sure that threads have had enough time to start...  */
     sleep(1);
 
     /*  Shutdown the scheduler and wait until it returns  */
     GNUNET_WORKER_synch_destroy(my_current_worker);
+
+    return 0;
 
 }
 ```
@@ -129,6 +131,16 @@ and without a “load listener”.
 All the functions provided by this library can be safely launched by any thread
 at any moment.
 
+If you have **Doxygen** installed and want to generate the complete HTML
+documentation, please launch
+
+``` sh
+./configure
+make docs
+```
+
+For any issue, [drop a message][2].
+
 
 Current limitations
 -------------------
@@ -140,7 +152,7 @@ something changes in **GNUnet**'s code, `GNUNET_WORKER_create()` should be
 invoked only once; or at least, it is necessary to make sure that a previous
 worker is always destroyed before invoking `GNUNET_WORKER_create()` again.
 
-The library launches the **GNUnet** scheduler using `GNUNET_SCHEDULER_run()`,
+The library launches **GNUnet**'s scheduler using `GNUNET_SCHEDULER_run()`,
 which by default installs signal handlers. Installing signal handlers on a
 secondary thread is rarely the way to go. The problem could be solved by making
 the library rely on `GNUNET_SCHEDULER_run_with_optional_signals()` instead of
@@ -169,7 +181,7 @@ by running the `bootstrap` script. By default, `bootstrap` will also run the
 `make` command directly after `bootstrap`. To list different options use
 `./bootstrap --help`.
 
-For further information, see [INSTALL][2].
+For further information, see [INSTALL][3].
 
 
 Dependencies
@@ -189,10 +201,11 @@ Free software
 
 **GNUnet Worker** is free software. You can redistribute it and/or modify it
 under the terms of the **AGPL** license version 3 or any later version. See
-[COPYING][3] for details.
+[COPYING][4] for details.
 
 
   [1]: https://www.gnunet.org/
-  [2]: https://github.com/madmurphy/libgnunetworker/blob/main/INSTALL
-  [3]: https://github.com/madmurphy/libgnunetworker/blob/main/COPYING
+  [2]: https://github.com/madmurphy/libgnunetworker/issues
+  [3]: https://github.com/madmurphy/libgnunetworker/blob/main/INSTALL
+  [4]: https://github.com/madmurphy/libgnunetworker/blob/main/COPYING
 

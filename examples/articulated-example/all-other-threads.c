@@ -55,31 +55,40 @@ static void * thread_external_to_the_scheduler (
 
 int main (const int argc, const char * const * const argv) {
 
-	/*  Create a separate thread where GNUnet's scheduler is run  */
-	GNUNET_WORKER_Handle * my_current_worker = GNUNET_WORKER_create(
-		NULL,
-		NULL,
-		NULL
-	);
+	GNUNET_WORKER_Handle * my_current_worker;
 
-	if (!my_current_worker) {
+	/*  Create a separate thread where GNUnet's scheduler is run  */
+	if (GNUNET_WORKER_create(&my_current_worker, NULL, NULL, NULL)) {
 
 		fprintf(stderr, "Sorry, something went wrong :-(\n");
 		return 1;
 
-	}
+	};
 
 	/*  Create one thread for each member of the `thread_names` array  */
 	for (size_t idx = 0; idx < NUM_THREADS; idx++) {
 
 		my_thread_data[idx].name = thread_names[idx];
 		my_thread_data[idx].worker = my_current_worker;
-		pthread_create(
-			&my_thread_data[idx].thread,
-			NULL,
-			&thread_external_to_the_scheduler,
-			&my_thread_data[idx]
-		);
+
+		if (
+			pthread_create(
+				&my_thread_data[idx].thread,
+				NULL,
+				&thread_external_to_the_scheduler,
+				&my_thread_data[idx]
+			)
+		) {
+
+			fprintf(
+				stderr,
+				"Unable to create thread \"%s\"\n",
+				my_thread_data[idx].name
+			);
+
+			return 1;
+
+		}
 
 	}
 
@@ -95,6 +104,8 @@ int main (const int argc, const char * const * const argv) {
 
 	/*  Shutdown the scheduler  */
 	GNUNET_WORKER_synch_destroy(my_current_worker);
+
+	return 0;
 
 }
 

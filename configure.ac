@@ -5,9 +5,10 @@ m4_include([autostuff/m4/not-autotools.m4])
 AC_PREREQ([2.69])
 
 AC_INIT([GNUnet Worker],
-	[0.2.0],
+	[0.3.0],
 	[madmurphy333@gmail.com],
-	[lib]n4_mem([GL_PROJECT_NAME], [gnunetworker]),
+	[lib]n4_mem([GL_PROJECT_NAME],
+		[gnunetworker]),
 	[https://github.com/madmurphy/libgnunetworker])
 
 NC_GLOBAL_LITERALS(
@@ -25,10 +26,12 @@ AC_CONFIG_AUX_DIR([build-aux])
 
 AC_CONFIG_SRCDIR([src/worker.c])
 
-AC_CONFIG_FILES([Makefile
-src/Makefile
-src/]GL_PROJECT_NAME[.pc
-po/Makefile.in])
+AC_CONFIG_FILES(m4_normalize([
+	Makefile
+	src/Makefile
+	src/]GL_PROJECT_NAME[.pc
+	po/Makefile.in
+]))
 
 AM_INIT_AUTOMAKE([1.11])
 
@@ -40,7 +43,7 @@ AC_PROG_GREP
 
 AC_CHECK_PROG([HAVE_PKGCONFIG], [pkg-config], [yes], [no])
 
-AS_IF([test "x${HAVE_PKGCONFIG}" = xno],
+AS_IF([test "x${HAVE_PKGCONFIG}" != 'xyes'],
 	[AC_MSG_ERROR([you need to have pkgconfig installed!])])
 
 PKG_CHECK_MODULES([GNUNET_WORKER], [gnunetutil])

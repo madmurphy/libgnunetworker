@@ -1,4 +1,4 @@
-/*  -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*-  */
+/*  -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 4; tab-width: 4 -*-  */
 
 /*\
 |*|
@@ -26,8 +26,8 @@
 
 /**
 
-	@file       worker.h
-	@brief      GNUnet Worker private header
+    @file       worker.h
+    @brief      GNUnet Worker private header
 
 **/
 
@@ -38,6 +38,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdatomic.h>
 #include <pthread.h>
 #include <time.h>
 #include <gnunet/platform.h>
@@ -50,7 +51,7 @@
 
 /**
 
-	@brief      A generic "success" alias for the `pthread_*()` function family
+    @brief      A generic "success" alias for the `pthread_*()` function family
 
 **/
 #define __EOK__ 0
@@ -58,96 +59,115 @@
 
 /**
 
-	@brief      The priority whereby the listener will be woken up after a beep
+    @brief      The priority whereby the listener will be woken up after a beep
 
-	What priority should we assign to this? The listener itself can schedule
-	jobs with different priorities, including potentially high priority ones,
-	and after detecting a shutdown it will invoke `GNUNET_SCHEDULER_shutdown()`
-	directly, without scheduling it.
+    What priority should we assign to this? The listener itself can schedule
+    jobs with different priorities, including potentially high priority ones,
+    and after detecting a shutdown it will invoke `GNUNET_SCHEDULER_shutdown()`
+    directly, without scheduling it.
 
-	Would it make sense to give low priority to it, instead of high priority?
+    Would it make sense to give low priority to it, instead of high priority?
 
-	In favor of low priority: if threads push multiple jobs at once the
-	listener will likely wake up less often and will schedule more tasks in a
-	single run.
+    In favor of low priority: if threads push multiple jobs at once the
+    listener will likely wake up less often and will schedule more tasks in a
+    single run.
 
-	Against low priority: if the user pushes a job with
-	`GNUNET_SCHEDULER_PRIORITY_HIGH`, this would anyway have to face the
-	listener's low priority bottleneck.
+    Against low priority: if the user pushes a job with
+    `GNUNET_SCHEDULER_PRIORITY_HIGH`, this would anyway have to face the
+    listener's low priority bottleneck.
 
 **/
-#define WORKER_LISTENER_PRIORITY GNUNET_SCHEDULER_PRIORITY_URGENT
+#define WORKER_LISTENER_PRIORITY \
+    GNUNET_SCHEDULER_PRIORITY_URGENT
 
 
 /**
 
-	@brief      Possible states of a worker
+    @brief      Possible states of a worker
 
 **/
-enum GNUNET_WorkerState {
-	ALIVE_WORKER = 0,   /**< The worker is alive and well **/
-	DYING_WORKER = 1,   /**< The worker is not listening (being shut down) **/
-	ZOMBIE_WORKER = 2,  /**< The worker is unable to die (pipe is broken) **/
-	DEAD_WORKER = 3     /**< The worker is dead, to be disposed soon **/
+enum GNUNET_WORKER_State {
+    WORKER_IS_ALIVE = 0,    /**< The worker is alive and well **/
+    WORKER_SAYS_BYE = 1,    /**< The worker is calling its `on_worker_end` **/
+    WORKER_IS_DYING = 2,    /**< The worker is now useless (shutting down) **/
+    WORKER_IS_ZOMBIE = 3,   /**< The worker is unable to die (pipe is down) **/
+    WORKER_IS_DEAD = 4      /**< The worker is dead, to be disposed soon **/
 };
 
 
 /**
 
-	@brief      Possible future plans for a worker
+    @brief      Possible future plans for a worker
 
 **/
-enum GNUNET_WorkerDestiny {
-	WORKER_MUST_CONTINUE = 0,
-	WORKER_MUST_SHUT_DOWN = 1,
-	WORKER_MUST_BE_DISMISSED = 2
+enum GNUNET_WORKER_Destiny {
+    WORKER_MUST_CONTINUE = 0,       /**< The worker must continue to live **/
+    WORKER_MUST_SHUT_DOWN = 1,      /**< The worker must shut down **/
+    WORKER_MUST_BE_DISMISSED = 2    /**< The worker must be dismissed **/
 };
 
 
 /**
 
-	@brief      Doubly linked list containing tasks for the scheduler
+    @brief      Doubly linked list containing tasks for the scheduler
 
 **/
 typedef struct GNUNET_WORKER_JobList {
-	struct GNUNET_WORKER_JobList * prev;
-	struct GNUNET_WORKER_JobList * next;
-	GNUNET_WORKER_Handle * assigned_to;
-    void * data;
-    GNUNET_CallbackRoutine routine;
-	struct GNUNET_SCHEDULER_Task * scheduled_as;
-	enum GNUNET_SCHEDULER_Priority priority;
+    struct GNUNET_WORKER_JobList
+        * prev;                     /**< The previous job in the list **/
+    struct GNUNET_WORKER_JobList
+        * next;                     /**< The next job in the list **/
+    GNUNET_WORKER_Handle
+        * assigned_to;              /**< The worker the job is assigned to **/
+    void
+        * data;                     /**< The user's custom data for the job **/
+    GNUNET_CallbackRoutine
+        routine;                    /**< The job's routine **/
+    struct GNUNET_SCHEDULER_Task
+        * scheduled_as;             /**< A handle for the scheduled job **/
+    enum GNUNET_SCHEDULER_Priority
+        priority;                   /**< The job's priority **/
 } GNUNET_WORKER_JobList;
 
 
 /**
 
-	@brief      The entire scope of a worker
+    @brief      The entire scope of a worker
 
 **/
 typedef struct GNUNET_WORKER_Handle {
-	GNUNET_WORKER_JobList
-		* wishlist,
-		* schedules;
-	struct GNUNET_SCHEDULER_Task
-		* listener_schedule,
-		* shutdown_schedule;
-	const GNUNET_WorkerHandlerRoutine master;
-	const GNUNET_ConfirmRoutine on_start;
-	const GNUNET_CallbackRoutine on_terminate;
-	void * const data;
-	pthread_mutex_t
-		tasks_mutex,
-		state_mutex;
-	Requirement
-		scheduler_has_returned,
-		worker_is_disposable;
-	const pthread_t own_scheduler_thread;
-	struct GNUNET_NETWORK_FDSet * const beep_fds;
-	int beep_fd[2];
-	_Atomic enum GNUNET_WorkerState state;
-	enum GNUNET_WorkerDestiny future_plans;
-	const bool scheduler_thread_is_owned;
+    Requirement
+        scheduler_has_returned, /**< The scheduler has returned **/
+        worker_is_disposable;   /**< `free()` can be launched on the worker **/
+    pthread_mutex_t
+        tasks_mutex,            /**< For `::wishlist` and `::future_plans` **/
+        kill_mutex;             /**< For various shutting down operations **/
+    GNUNET_WORKER_JobList
+        * wishlist,             /**< Mutual exclusion via `::tasks_mutex` **/
+        * schedules;            /**< Accessed only by the worker thread **/
+    struct GNUNET_SCHEDULER_Task
+        * listener_schedule,    /**< Accessed only by the worker thread **/
+        * shutdown_schedule;    /**< Accessed only by the worker thread **/
+    GNUNET_WORKER_MasterRoutine
+        const master;           /**< See the `master_routine` argument **/
+    GNUNET_ConfirmRoutine
+        const on_start;         /**< See the `on_worker_start` argument **/
+    GNUNET_CallbackRoutine
+        const on_terminate;     /**< See the `on_worker_end` argument **/
+    void
+        * const data;           /**< See the `worker_data` argument **/
+    pthread_t
+        const own_thread;       /**< The worker's thread (if we created it) **/
+    struct GNUNET_NETWORK_FDSet
+        * const beep_fds;       /**< GNUnet's file descriptor set **/
+    int
+        beep_fd[2];             /**< The worker's pipe **/
+    atomic_int
+        state;                  /**< See `enum GNUNET_WORKER_State` **/
+    enum GNUNET_WORKER_Destiny
+        future_plans;           /**< Mutual exclusion via `::tasks_mutex` **/
+    bool
+        const thread_is_owned;  /**< `1` if we launched the worker thread **/
 } GNUNET_WORKER_Handle;
 
 

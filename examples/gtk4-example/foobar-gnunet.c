@@ -35,6 +35,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdatomic.h>
 #include <gnunet/platform.h>
 #include <gnunet/gnunet_fs_service.h>
 #include <glib.h>
@@ -71,9 +72,20 @@ void clear_query_context (
 	void * const v_app_data
 ) {
 
+	#define app_data ((AppData *) v_app_data)
+
+	atomic_store(&app_data->worker_is_running, false);
 	g_clear_pointer(&indexed_context, GNUNET_FS_get_indexed_files_cancel);
 	g_clear_pointer(&fs_handle, GNUNET_FS_stop);
-	fprintf(stderr, "The GNUnet worker has terminated\n");
+	fprintf(stderr, "The GNUnet worker has returned\n");
+
+	if (atomic_load(&app_data->ui_is_running)) {
+
+		g_idle_add(ui_quit_idle, app_data->ui_app);
+
+	}
+
+	#undef app_data
 
 }
 
@@ -224,13 +236,14 @@ bool fs_service_start_check (
 
 		fprintf(
 			stderr,
-			"Unable to interrogate the filesharing service - abort"
+			"Unable to interrogate the filesharing service - abort\n"
 		);
 
 		return false;
 
 	}
 
+	atomic_store(&app_data->worker_is_running, true);
 	return true;
 
 	#undef app_data
