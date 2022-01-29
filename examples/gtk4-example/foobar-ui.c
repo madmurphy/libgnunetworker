@@ -189,8 +189,9 @@ static void on_list_files_clicked (
 
 	g_mutex_unlock(&app_data->fs_query.indexed_mutex);
 
-	GNUNET_WORKER_push_load(
+	GNUNET_WORKER_push_load_with_priority(
 		app_data->gnunet_worker,
+		GNUNET_SCHEDULER_PRIORITY_UI,
 		b_must_cancel ?
 			&cancel_indexed_query
 		:

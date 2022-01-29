@@ -1,6 +1,6 @@
 {
 	"name": "libgnunetworker",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"description": "Multithreading with GNUnet",
 	"homepage": "https://github.com/madmurphy/libgnunetworker",
 	"author": "madmurphy333@gmail.com",

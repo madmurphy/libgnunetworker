@@ -5,7 +5,7 @@ m4_include([autostuff/m4/not-autotools.m4])
 AC_PREREQ([2.69])
 
 AC_INIT([GNUnet Worker],
-	[0.3.0],
+	[0.3.1],
 	[madmurphy333@gmail.com],
 	[lib]n4_mem([GL_PROJECT_NAME],
 		[gnunetworker]),

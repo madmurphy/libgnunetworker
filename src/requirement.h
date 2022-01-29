@@ -108,10 +108,12 @@ static inline void requirement_paint_green (
 	Requirement * const requirement
 ) {
 	pthread_mutex_lock(&requirement->req_mutex);
-	if (requirement->req_unfulfillment > 0) {
-		requirement->req_unfulfillment--;
+	if (
+		requirement->req_unfulfillment < 1 ||
+		--requirement->req_unfulfillment < 1
+	) {
+		pthread_cond_signal(&requirement->req_cond);
 	}
-	pthread_cond_signal(&requirement->req_cond);
 	pthread_mutex_unlock(&requirement->req_mutex);
 }
 

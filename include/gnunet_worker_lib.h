@@ -144,7 +144,8 @@ typedef void (* GNUNET_WORKER_MasterRoutine) (
                 `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
                 `GNUNET_WORKER_ERR_THREAD_CREATE`
 
-    Any non-zero value indicates that the worker has not been created.
+    Any non-zero value indicates that the worker has not been created and the
+    call was no-op.
 
     If you want to exploit the facilities offered by `GNUNET_PROGRAM_run()`
     together with the facilities offered by this framework, you can launch
@@ -173,7 +174,7 @@ typedef void (* GNUNET_WORKER_MasterRoutine) (
 
 **/
 extern int GNUNET_WORKER_create (
-    GNUNET_WORKER_Handle ** save_handle,
+    GNUNET_WORKER_Handle ** const save_handle,
     const GNUNET_ConfirmRoutine on_worker_start,
     const GNUNET_CallbackRoutine on_worker_end,
     void * const worker_data
@@ -210,7 +211,8 @@ extern int GNUNET_WORKER_create (
                 `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
                 `GNUNET_WORKER_ERR_THREAD_CREATE`
 
-    Any non-zero value indicates that the worker has not been created.
+    Any non-zero value indicates that the worker has not been created and the
+    call was no-op.
 
     This function will not return until the scheduler returns. The @p master
     thread, or equivalently any other thread, must eventually take care of
@@ -247,11 +249,11 @@ extern int GNUNET_WORKER_create (
 
 **/
 extern int GNUNET_WORKER_start_serving (
-	GNUNET_WORKER_Handle ** save_handle,
-	const GNUNET_WORKER_MasterRoutine master_routine,
-	const GNUNET_ConfirmRoutine on_worker_start,
-	const GNUNET_CallbackRoutine on_worker_end,
-	void * const worker_data
+    GNUNET_WORKER_Handle ** const save_handle,
+    const GNUNET_WORKER_MasterRoutine master_routine,
+    const GNUNET_ConfirmRoutine on_worker_start,
+    const GNUNET_CallbackRoutine on_worker_end,
+    void * const worker_data
 );
 
 
@@ -281,7 +283,8 @@ extern int GNUNET_WORKER_start_serving (
                 `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
                 `GNUNET_WORKER_ERR_THREAD_CREATE`
 
-    Any non-zero value indicates that the worker has not been created.
+    Any non-zero value indicates that the worker has not been created and the
+    call was no-op.
 
     This is the only function that requires that the user has already started
     the GNUnet scheduler manually (either via `GNUNET_SCHEDULER_run()` or
@@ -317,10 +320,10 @@ extern int GNUNET_WORKER_start_serving (
 
 **/
 extern int GNUNET_WORKER_adopt_running_scheduler (
-    GNUNET_WORKER_Handle ** save_handle,
-	const GNUNET_WORKER_MasterRoutine master_routine,
-	const GNUNET_CallbackRoutine on_worker_end,
-	void * const worker_data
+    GNUNET_WORKER_Handle ** const save_handle,
+    const GNUNET_WORKER_MasterRoutine master_routine,
+    const GNUNET_CallbackRoutine on_worker_end,
+    void * const worker_data
 );
 
 
@@ -367,7 +370,7 @@ extern int GNUNET_WORKER_adopt_running_scheduler (
 **/
 extern int GNUNET_WORKER_push_load_with_priority (
     GNUNET_WORKER_Handle * const worker,
-    enum GNUNET_SCHEDULER_Priority const job_priority,
+    const enum GNUNET_SCHEDULER_Priority job_priority,
     const GNUNET_CallbackRoutine job_routine,
     void * const job_data
 );

@@ -39,22 +39,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdatomic.h>
-#include <pthread.h>
 #include <time.h>
+#include <pthread.h>
 #include <gnunet/platform.h>
 #include <gnunet/gnunet_common.h>
 #include <gnunet/gnunet_scheduler_lib.h>
 #include <gnunet/gnunet_network_lib.h>
 #include <gnunet_worker_lib.h>
 #include "requirement.h"
-
-
-/**
-
-    @brief      A generic "success" alias for the `pthread_*()` function family
-
-**/
-#define __EOK__ 0
 
 
 /**
@@ -79,6 +71,14 @@
 **/
 #define WORKER_LISTENER_PRIORITY \
     GNUNET_SCHEDULER_PRIORITY_URGENT
+
+
+/**
+
+    @brief      A generic "success" alias for the `pthread_*()` function family
+
+**/
+#define __EOK__ 0
 
 
 /**
@@ -134,16 +134,20 @@ typedef struct GNUNET_WORKER_JobList {
 
     @brief      The entire scope of a worker
 
+    Non-`const` fields can be modified either by the worker thread only or by
+    multiple threads; in the latter case they are either atomic or a mutual
+    exclusion mechanism is provided.
+
 **/
 typedef struct GNUNET_WORKER_Handle {
     Requirement
         scheduler_has_returned, /**< The scheduler has returned **/
         worker_is_disposable;   /**< `free()` can be launched on the worker **/
     pthread_mutex_t
-        tasks_mutex,            /**< For `::wishlist` and `::future_plans` **/
+        wishes_mutex,           /**< For `::wishlist` and `::future_plans` **/
         kill_mutex;             /**< For various shutting down operations **/
     GNUNET_WORKER_JobList
-        * wishlist,             /**< Mutual exclusion via `::tasks_mutex` **/
+        * wishlist,             /**< Mutual exclusion via `::wishes_mutex` **/
         * schedules;            /**< Accessed only by the worker thread **/
     struct GNUNET_SCHEDULER_Task
         * listener_schedule,    /**< Accessed only by the worker thread **/
@@ -160,12 +164,12 @@ typedef struct GNUNET_WORKER_Handle {
         const own_thread;       /**< The worker's thread (if we created it) **/
     struct GNUNET_NETWORK_FDSet
         * const beep_fds;       /**< GNUnet's file descriptor set **/
-    int
+    const int
         beep_fd[2];             /**< The worker's pipe **/
     atomic_int
-        state;                  /**< See `enum GNUNET_WORKER_State` **/
+        state;                  /**< Atomic; see `enum GNUNET_WORKER_State` **/
     enum GNUNET_WORKER_Destiny
-        future_plans;           /**< Mutual exclusion via `::tasks_mutex` **/
+        future_plans;           /**< Mutual exclusion via `::wishes_mutex` **/
     bool
         const thread_is_owned;  /**< `1` if we launched the worker thread **/
 } GNUNET_WORKER_Handle;
