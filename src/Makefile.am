@@ -14,9 +14,8 @@ AM_CFLAGS = \
 	-g \
 	-O2 \
 	-std=c11 \
-	$(WARN_CFLAGS) \
 	$(GNUNET_CFLAGS) \
-	$(GNUNET_WORKER_CFLAGS)
+	$(WARN_CFLAGS)
 
 lib_LTLIBRARIES = \
 	lib@PROJECT_NAME@.la
@@ -30,7 +29,12 @@ lib@PROJECT_NAME@_la_LDFLAGS = \
 	-version-info $(LTVERSIONINFO)
 
 lib@PROJECT_NAME@_la_LIBADD = \
+	$(PTHREAD_LIBS) \
 	$(GNUNET_WORKER_LIBS)
+
+lib@PROJECT_NAME@_la_CFLAGS = \
+	$(PTHREAD_CFLAGS) \
+	$(GNUNET_WORKER_CFLAGS)
 
 pkgconfig_DATA = \
 	@PROJECT_NAME@.pc

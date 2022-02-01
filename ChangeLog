@@ -2,6 +2,20 @@ Change Log
 ==========
 
 
+## 0.4.0 (2022-02-01)
+
+Changes:
+
+* Identifier † `GNUNET_WORKER_ERR_OK` in `enum GNUNET_WORKER_ErrNo` has been
+  renamed to `GNUNET_WORKER_SUCCESS`
+* The behavior of all functions has been rendered as agnostic as possible in
+  respect to which thread invokes them
+* Conditional branching has been made more coherent, although this has come
+  with a cost in the length and the complexity of the code
+* General code review
+* Documentation
+
+
 ## 0.3.1 (2022-01-29)
 
 Changes:

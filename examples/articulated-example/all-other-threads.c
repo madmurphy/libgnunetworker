@@ -55,10 +55,10 @@ static void * thread_external_to_the_scheduler (
 
 int main (const int argc, const char * const * const argv) {
 
-	GNUNET_WORKER_Handle * my_current_worker;
+	GNUNET_WORKER_Handle * my_worker;
 
 	/*  Create a separate thread where GNUnet's scheduler is run  */
-	if (GNUNET_WORKER_create(&my_current_worker, NULL, NULL, NULL)) {
+	if (GNUNET_WORKER_create(&my_worker, NULL, NULL, NULL)) {
 
 		fprintf(stderr, "Sorry, something went wrong :-(\n");
 		return 1;
@@ -69,7 +69,7 @@ int main (const int argc, const char * const * const argv) {
 	for (size_t idx = 0; idx < NUM_THREADS; idx++) {
 
 		my_thread_data[idx].name = thread_names[idx];
-		my_thread_data[idx].worker = my_current_worker;
+		my_thread_data[idx].worker = my_worker;
 
 		if (
 			pthread_create(
@@ -103,7 +103,7 @@ int main (const int argc, const char * const * const argv) {
 	);
 
 	/*  Shutdown the scheduler  */
-	GNUNET_WORKER_synch_destroy(my_current_worker);
+	GNUNET_WORKER_synch_destroy(my_worker);
 
 	return 0;
 

@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: libgnunetworker 0.3.1\n"
+"Project-Id-Version: libgnunetworker 0.4.0\n"
 "Report-Msgid-Bugs-To: madmurphy333@gmail.com\n"
-"POT-Creation-Date: 2022-01-29 11:05+0000\n"
-"PO-Revision-Date: 2022-01-29 11:05+0000\n"
+"POT-Creation-Date: 2022-02-01 21:22+0000\n"
+"PO-Revision-Date: 2022-02-01 21:22+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Italian <tp@lists.linux.it>\n"
 "Language: it\n"
@@ -17,19 +17,23 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/worker.c:357
+#: src/worker.c:487
 msgid "Unable to read the notification sent to the worker thread\n"
 msgstr "Impossibile leggere la notifica inviata al worker thread\n"
 
-#: src/worker.c:539
-msgid "The scheduler has returned unexpectedly\n"
-msgstr "Lo scheduler è ritornato inaspettatamente\n"
+#: src/worker.c:684
+msgid ""
+"The worker thread's event loop has been unexpectedly cut off - scheduler is "
+"down\n"
+msgstr ""
+"Il loop degli eventi del worker thread è stato interrotto inaspettatamente - "
+"lo scheduler si è arrestato\n"
 
-#: src/worker.c:674 src/worker.c:774 src/worker.c:873 src/worker.c:1051
+#: src/worker.c:846 src/worker.c:997 src/worker.c:1142 src/worker.c:1378
 msgid "Double free detected\n"
 msgstr "Tentativo di doppio free rilevato\n"
 
-#: src/worker.c:951 src/worker.c:989 src/worker.c:1129 src/worker.c:1179
+#: src/worker.c:1244 src/worker.c:1285 src/worker.c:1480 src/worker.c:1533
 #, c-format
 msgid ""
 "`%s` has returned `%d`, possibly due to a bug in the GNUnet Worker module\n"
@@ -37,11 +41,17 @@ msgstr ""
 "`%s` ha restituito `%d`, possibilmente a causa di un bug nel modulo GNUnet "
 "Worker\n"
 
-#: src/worker.c:966 src/worker.c:1004 src/worker.c:1148 src/worker.c:1194
+#: src/worker.c:1260 src/worker.c:1301 src/worker.c:1500 src/worker.c:1549
 #, c-format
-msgid "`%s` has returned `%d` (unknown code)\n"
-msgstr "`%s` ha restituito `%d` (codice sconosciuto)\n"
+msgid ""
+"`%s` has returned `%d` (unknown code) while waiting for the worker thread to "
+"terminate\n"
+msgstr ""
+"`%s` ha restituito `%d` (codice sconosciuto) nell'attesa che il worker "
+"thread terminasse\n"
 
-#: src/worker.c:1248
-msgid "Detected attempt to push load into a destroyed worker\n"
-msgstr "Rilevato tentativo di aggiungere carico a un worker già distrutto\n"
+#: src/worker.c:1640
+msgid "An attempt to push load into a destroyed worker has been detected\n"
+msgstr ""
+"È stato rilevato un tentativo di aggiungere carico a un worker già "
+"distrutto\n"

@@ -30,6 +30,7 @@ dnl
 dnl  Expands to `value` after this has been stored into one or more macros
 dnl
 dnl  From: not-autotools/m4/not-m4sugar.m4
+dnl  Version: 1.0.0
 dnl
 m4_define([n4_mem],
 	[m4_if([$#], [0], [],
@@ -43,6 +44,7 @@ dnl
 dnl  Replaces `/\W/g,` with `'_'` and `/^\d/` with `_\0`
 dnl
 dnl  From: not-autotools/m4/not-autotools.m4
+dnl  Version: 1.0.0
 dnl
 AC_DEFUN([NA_SANITIZE_VARNAME],
 	[m4_if(m4_bregexp(m4_normalize([$1]), [[0-9]]), [0], [_])[]m4_translit(m4_normalize([$1]),
@@ -57,6 +59,7 @@ dnl  Variadic version of `AC_REQUIRE()` that can be invoked also from the
 dnl  global scope
 dnl
 dnl  From: not-autotools/m4/not-autotools.m4
+dnl  Version: 1.0.0
 dnl
 AC_DEFUN([NC_REQUIRE],
 	[m4_if([$#], [0],
@@ -76,6 +79,7 @@ dnl  Escapes all the occurrences of the apostrophe character in `string`
 dnl
 dnl  Requires: nothing
 dnl  From: not-autotools/m4/not-autotools.m4
+dnl  Version: 1.0.0
 dnl
 AC_DEFUN([NA_ESC_APOS],
 	[m4_bpatsubst([$@], ['], ['\\''])])
@@ -89,6 +93,7 @@ dnl  `AM_SUBST_NOTMAKE(var)`
 dnl
 dnl  Requires: nothing
 dnl  From: not-autotools/m4/not-autotools.m4
+dnl  Version: 1.0.0
 dnl
 AC_DEFUN([NC_SUBST_NOTMAKE], [
 	AC_SUBST([$1][]m4_if([$#], [0], [], [$#], [1], [], [, [$2]]))
@@ -106,6 +111,7 @@ dnl  invoked
 dnl
 dnl  Requires: `NA_SANITIZE_VARNAME()` and `NA_ESC_APOS()`
 dnl  From: not-autotools/m4/not-autotools.m4
+dnl  Version: 1.0.3
 dnl
 AC_DEFUN([NC_GLOBAL_LITERALS],
 	[m4_if([$#], [0], [], [$#], [1], [],
@@ -113,6 +119,25 @@ AC_DEFUN([NC_GLOBAL_LITERALS],
 			m4_normalize([$2]))[]m4_newline()[]AC_SUBST(_lit_,
 			[']NA_ESC_APOS(m4_normalize([$2]))['])[]m4_popdef([_lit_])[]m4_if([$#], [2], [],
 			[NC_GLOBAL_LITERALS(m4_shift2($@))])])])
+
+
+dnl  NM_AUTO_QUERY_PROGS(prog1[, prog2[, prog3[, ... progN]]])
+dnl  **************************************************************************
+dnl
+dnl  Checks whether one or more programs have been provided by the user or can
+dnl  be retrieved automatically, generating an `HAVE_*` conditional for each
+dnl  program
+dnl
+dnl  Requires: `NA_SANITIZE_VARNAME()`
+dnl  Version: 1.0.0
+dnl
+AC_DEFUN([NM_AUTO_QUERY_PROGS],
+	[m4_ifnblank([$1],
+		[m4_pushdef([_lit_], m4_quote(m4_toupper(NA_SANITIZE_VARNAME([$1]))))
+		AC_ARG_VAR(_lit_, [path to $1 utility])
+		AS_IF([test "x@S|@{]_lit_[}" = x], [AC_PATH_PROG(_lit_, [$1])])
+		AM_CONDITIONAL([HAVE_]_lit_,
+			[test "x@S|@{]_lit_[}" != x])[]NM_AUTO_QUERY_PROGS(m4_shift($@))])])
 
 
 dnl  EOF

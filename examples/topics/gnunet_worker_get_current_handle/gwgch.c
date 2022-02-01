@@ -2,9 +2,20 @@
 #include <gnunet/gnunet_worker_lib.h>
 
 
-static void task_for_the_scheduler (void * const data) {
+static void task_for_both_threads (void * const data) {
 
-	printf("Hello world\n");
+	GNUNET_WORKER_Handle
+		* current_worker = GNUNET_WORKER_get_current_handle();
+
+	if (current_worker) {
+
+		printf("This is the worker thread\n");
+
+	} else {
+
+		printf("This is not the worker thread\n");
+
+	}
 
 }
 
@@ -24,9 +35,11 @@ int main (const int argc, const char * const * const argv) {
 	/*  Run a function in the scheduler's thread  */
 	GNUNET_WORKER_push_load(
 		my_worker,
-		&task_for_the_scheduler,
+		&task_for_both_threads,
 		NULL
 	);
+
+	task_for_both_threads(NULL);
 
 	/*  Make sure that threads have had enough time to start...  */
 	sleep(1);

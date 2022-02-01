@@ -1,11 +1,12 @@
 dnl  Process this file with autoconf to produce a configure script.
 
 m4_include([autostuff/m4/not-autotools.m4])
+m4_include([autostuff/m4/ax_pthread.m4])
 
 AC_PREREQ([2.69])
 
 AC_INIT([GNUnet Worker],
-	[0.3.1],
+	[0.4.0],
 	[madmurphy333@gmail.com],
 	[lib]n4_mem([GL_PROJECT_NAME],
 		[gnunetworker]),
@@ -39,6 +40,8 @@ AM_SILENT_RULES([yes])
 
 AC_PROG_CC
 
+AX_PTHREAD
+
 AC_PROG_GREP
 
 AC_CHECK_PROG([HAVE_PKGCONFIG], [pkg-config], [yes], [no])
@@ -47,12 +50,6 @@ AS_IF([test "x${HAVE_PKGCONFIG}" != 'xyes'],
 	[AC_MSG_ERROR([you need to have pkgconfig installed!])])
 
 PKG_CHECK_MODULES([GNUNET_WORKER], [gnunetutil])
-
-AC_ARG_VAR([FIND], [Unix find utility])
-
-AS_IF([test "x${FIND}" = x], [AC_PATH_PROG([FIND], [find])])
-
-AM_CONDITIONAL([HAVE_FIND], [test "x${FIND}" != x])
 
 ###  Keep the `pkgconfigdir` environment variable when non-empty
 AS_IF([test "x${pkgconfigdir}" = x],
@@ -70,6 +67,8 @@ AC_ARG_WITH([pkgconfigdir],
 			[AS_VAR_COPY([pkgconfigdir], [withval])])])],
 	[:])
 
+NM_AUTO_QUERY_PROGS([find], [doxygen])
+
 AC_SUBST([pkgconfigdir])
 
 AM_GNU_GETTEXT([external])
@@ -84,7 +83,7 @@ AM_COND_IF([NLS_ENABLED], [
 		["${GETTEXT_PACKAGE}"], [GETTEXT package name])
 ])
 
-AM_CONDITIONAL([DOC_IS_GENERATED], [test -d 'docs'])
+AM_CONDITIONAL([DIST_DOCS_DIR], [test -d 'docs' -o "x${DOXYGEN}" != 'x'])
 
 AC_SUBST([PROJECT_NAME], GL_PROJECT_NAME)
 

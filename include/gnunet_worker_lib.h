@@ -58,7 +58,7 @@ extern "C" {
 enum GNUNET_WORKER_ErrNo {
 
     /*  Not at all an error  */
-    GNUNET_WORKER_ERR_OK = 0,               /**< Everything OK **/
+    GNUNET_WORKER_SUCCESS = 0,              /**< Everything OK [value=0] **/
 
     /*  Errors that need a change in the user's bad programming to be fixed  */
     GNUNET_WORKER_ERR_DOUBLE_FREE = 1,      /**< Double free detected **/
@@ -81,8 +81,8 @@ enum GNUNET_WORKER_ErrNo {
 
     /*  Errors that need a change in GNUnet Worker's bad code to be fixed  */
     GNUNET_WORKER_ERR_INTERNAL_BUG = 127    /**< Unexpected error, probably due
-                                                 to a bug in GNUnet Worker's
-                                                 code **/
+                                                 to a bug in the GNUnet Worker
+                                                 module **/
 
 };
 
@@ -140,7 +140,7 @@ typedef void (* GNUNET_WORKER_MasterRoutine) (
                                                                      [NULLABLE]
     @param      worker_data         Custom user data retrievable at any moment
                                                                      [NULLABLE]
-    @return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+    @return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
                 `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
                 `GNUNET_WORKER_ERR_THREAD_CREATE`
 
@@ -149,9 +149,11 @@ typedef void (* GNUNET_WORKER_MasterRoutine) (
 
     If you want to exploit the facilities offered by `GNUNET_PROGRAM_run()`
     together with the facilities offered by this framework, you can launch
-    `GNUNET_WORKER_create()` inside the `main()` function of your program and
-    pass the handle returned to `GNUNET_PROGRAM_run2()` -- called with
-    `GNUNET_YES` as last argument so that another GNUnet scheduler is not run.
+    `GNUNET_PROGRAM_run2()` -- called with `GNUNET_YES` as last argument so
+    that another GNUnet scheduler is not run -- and then invoke
+    `GNUNET_WORKER_create()` inside the `GNUNET_PROGRAM_Main` function of your
+    application. See the comments in `examples/gtk4-example/foobar-main.c` for
+    a possible example.
 
     The @p on_worker_end routine is not like any routine, but represents a
     point of no return after which it becomes illegal to attempt to destroy a
@@ -161,8 +163,7 @@ typedef void (* GNUNET_WORKER_MasterRoutine) (
     is always safe. Thus, if a program allows different threads to destroy a
     worker and these do not behave deterministically (e.g., user interaction),
     you must use the @p on_worker_end routine to set a global variable to some
-    value that prevents other threads to use the worker's address ever again
-    after the worker has been destroyed.
+    value that prevents other threads to use the worker's address ever again.
 
     If @p save_handle is not `NULL`, it will be used to store a handle for the
     new worker before exiting. If the function returns a non-zero value the
@@ -206,13 +207,21 @@ extern int GNUNET_WORKER_create (
                                                                      [NULLABLE]
     @param      worker_data         Custom user data retrievable at any moment
                                                                      [NULLABLE]
-    @return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+    @return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
                 `GNUNET_WORKER_ERR_ALREADY_SERVING`,
                 `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
                 `GNUNET_WORKER_ERR_THREAD_CREATE`
 
     Any non-zero value indicates that the worker has not been created and the
     call was no-op.
+
+    If you want to exploit the facilities offered by `GNUNET_PROGRAM_run()`
+    together with the facilities offered by this framework, you can launch
+    `GNUNET_PROGRAM_run2()` -- called with `GNUNET_YES` as last argument so
+    that another GNUnet scheduler is not run -- and then invoke
+    `GNUNET_WORKER_create()` inside the `GNUNET_PROGRAM_Main` function of your
+    application. See `examples/gtk4-example/foobar-main.c` for a possible
+    example.
 
     This function will not return until the scheduler returns. The @p master
     thread, or equivalently any other thread, must eventually take care of
@@ -244,8 +253,7 @@ extern int GNUNET_WORKER_create (
     is always safe. Thus, if a program allows different threads to destroy a
     worker and these do not behave deterministically (e.g., user interaction),
     you must use the @p on_worker_end routine to set a global variable to some
-    value that prevents other threads to use the worker's address ever again
-    after the worker has been destroyed.
+    value that prevents other threads to use the worker's address ever again.
 
 **/
 extern int GNUNET_WORKER_start_serving (
@@ -259,7 +267,7 @@ extern int GNUNET_WORKER_start_serving (
 
 /**
 
-    @brief      Install a load listener for an already running scheduler and
+    @brief      Install a load listener into an already running scheduler and
                 turn the latter into a worker
     @param      save_handle         A placeholder for storing a handle for the
                                     new worker created               [NULLABLE]
@@ -278,7 +286,7 @@ extern int GNUNET_WORKER_start_serving (
                                                                      [NULLABLE]
     @param      worker_data         Custom user data retrievable at any moment
                                                                      [NULLABLE]
-    @return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+    @return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
                 `GNUNET_WORKER_ERR_ALREADY_SERVING`,
                 `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
                 `GNUNET_WORKER_ERR_THREAD_CREATE`
@@ -291,9 +299,9 @@ extern int GNUNET_WORKER_start_serving (
     `GNUNET_PROGRAM_run()`). Calling this function without the scheduler
     running will result in undefined behavior.
 
-    The `on_worker_start` argument is missing by design, because differently
-    than `GNUNET_WORKER_start_serving()` this function returns immediately (in
-    what has now become a worker thread).
+    The `on_worker_start` argument is missing by design, as differently than
+    `GNUNET_WORKER_start_serving()` this function returns immediately (in what
+    has now become a worker thread).
 
     If @p master_routine is non-`ǸULL`, it will be launched in a new detached
     (non-joinable) thread.
@@ -315,8 +323,7 @@ extern int GNUNET_WORKER_start_serving (
     is always safe. Thus, if a program allows different threads to destroy a
     worker and these do not behave deterministically (e.g., user interaction),
     you must use the @p on_worker_end routine to set a global variable to some
-    value that prevents other threads to use the worker's address ever again
-    after the worker has been destroyed.
+    value that prevents other threads to use the worker's address ever again.
 
 **/
 extern int GNUNET_WORKER_adopt_running_scheduler (
@@ -329,13 +336,13 @@ extern int GNUNET_WORKER_adopt_running_scheduler (
 
 /**
 
-    @brief      Schedule a new function for the worker, with a priority
+    @brief      Schedule a new function for the worker thread, with a priority
     @param      worker          The worker for which the task must be scheduled
                                                                  [NON-NULLABLE]
     @param      job_priority    The priority of the task
     @param      job_routine     The task to schedule             [NON-NULLABLE]
     @param      job_data        Custom data to pass to the task      [NULLABLE]
-    @return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+    @return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
                 `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
                 `GNUNET_WORKER_ERR_INVALID_HANDLE`
 
@@ -378,12 +385,13 @@ extern int GNUNET_WORKER_push_load_with_priority (
 
 /**
 
-    @brief      Schedule a new function for the worker with default priority
+    @brief      Schedule a new function for the worker thread with default
+                priority
     @param      worker          A pointer to the worker where the task must be
                                 scheduled                        [NON-NULLABLE]
     @param      job_routine     The task to schedule             [NON-NULLABLE]
     @param      job_data        Custom data to pass to the task      [NULLABLE]
-    @return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+    @return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
                 `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
                 `GNUNET_WORKER_ERR_INVALID_HANDLE`
 
@@ -400,6 +408,21 @@ extern int GNUNET_WORKER_push_load_with_priority (
 
     A non-zero return value indicates that @p job_routine was not scheduled
     (the call was no-op and the user may attempt again).
+
+    A return value of `GNUNET_WORKER_ERR_INVALID_HANDLE` indicates that the
+    worker is beeing destroyed by this or another thread. If this happens, the
+    caller's code is in a dangerous position: the next time, instead of a
+    handle in the process of being destroyed, an already destroyed handle might
+    be passed to this function, and that will cause undefined behavior
+    (probably a crash). This error must be handled exactly like a double free
+    or corruption error, and you should always pay attention that a worker's
+    address is never used again after a worker has been destroyed. You must not
+    handle `GNUNET_WORKER_ERR_INVALID_HANDLE` using runtime checks unless you
+    are debugging your program; the way to handle this error is by writing code
+    that does not use a worker's address after this has been destroyed. Please
+    have a look at the documentation of either `GNUNET_WORKER_start_serving()`,
+    `GNUNET_WORKER_create()` or `GNUNET_WORKER_adopt_running_scheduler()` for
+    more information on how to avoid that his happens.
 
 **/
 static inline int GNUNET_WORKER_push_load (
@@ -419,9 +442,10 @@ static inline int GNUNET_WORKER_push_load (
 /**
 
     @brief      Terminate a worker and free its memory, without waiting for the
-                scheduler to return (asynchronous)
+                scheduler to return -- this will be completed in parallel
+                (asynchronous)
     @param      worker          The worker to destroy            [NON-NULLABLE]
-    @return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+    @return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
                 `GNUNET_WORKER_ERR_DOUBLE_FREE` and `GNUNET_WORKER_ERR_SIGNAL`
 
     This function is used to launch `GNUNET_SCHEDULER_shutdown()` in the worker
@@ -446,24 +470,30 @@ static inline int GNUNET_WORKER_push_load (
     handle might be passed to this function, and that will cause undefined
     behavior (probably a crash). This error must be handled exactly like a
     double free or corruption error, and you should always pay attention that
-    no more than one thread can destroy the worker. Please have a look at the
+    no more than one thread can destroy the worker. You must not handle
+    `GNUNET_WORKER_ERR_DOUBLE_FREE` using runtime checks unless you are
+    debugging your program; the way to handle this error is by writing code
+    that does not destroy a worker twice. Please have a look at the
     documentation of either `GNUNET_WORKER_adopt_running_scheduler()`,
     `GNUNET_WORKER_start_serving()` or `GNUNET_WORKER_create()` for more
-    information on how to avoid that his happens.
+    information on how to avoid that his happens. It is very likely that this
+    error code will be removed in the future and a call to `exit()` will appear
+    in its place.
 
-    Zero or `GNUNET_WORKER_ERR_DOUBLE_FREE` indicate that the scheduler will
-    eventually shut down; `GNUNET_WORKER_ERR_SIGNAL` instead indicates that it
-    was not possible to notify the worker about the shutdown (this error can be
-    thrown only if this function was not invoked from a worker thread). In this
-    case there is not much to do. The return value is caused by an error during
-    `write()` into the worker's pipe. The only way to know whether the worker
-    has received the message or not is by passing an `on_worker_end` routine
-    during the creation of the worker and let it signal about the shutdown
-    happening. If no signal arrives it is possible to try to wake up the worker
-    for the shutdown by using `GNUNET_WORKER_ping()`. A pipe breaking is a very
-    unlikely event to occur, and it might make sense to ignore the possible
-    `GNUNET_WORKER_ERR_SIGNAL` return value, assume that the worker has been
-    destroyed, and tolerate the rare events of workers turned into zombies.
+    A value of `GNUNET_WORKER_ERR_SIGNAL` indicates that it was not possible to
+    notify the worker about the shutdown (this error can be thrown only if this
+    function was not invoked from the worker thread). In this case there is not
+    much to do. The return value was caused by an error during `write()` into
+    the worker's pipe. The only way to know whether the worker has received the
+    message or not is by passing an `on_worker_end` routine during the creation
+    of the worker and let it signal about the shutdown happening. If no signal
+    arrives it is possible to try and wake up the worker for the shutdown by
+    using `GNUNET_WORKER_ping()` or by invoking this function again. A pipe
+    breaking is a very unlikely event to occur, and it might make sense to
+    ignore completely the possible `GNUNET_WORKER_ERR_SIGNAL` return value,
+    assume that the worker has been destroyed, and tolerate the rare events of
+    workers turned into zombies; or alternatively, it might be a good idea to
+    launch `exit()`, if a worker turns into a zombie.
 
 **/
 extern int GNUNET_WORKER_asynch_destroy (
@@ -473,9 +503,10 @@ extern int GNUNET_WORKER_asynch_destroy (
 
 /**
 
-    @brief      Terminate a worker and free its memory (synchronous)
+    @brief      Terminate a worker and free its memory, waiting for the
+                scheduler to complete the shutdown (synchronous)
     @param      worker          The worker to destroy            [NON-NULLABLE]
-    @return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+    @return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
                 `GNUNET_WORKER_ERR_DOUBLE_FREE`, `GNUNET_WORKER_ERR_UNKNOWN`
                 `GNUNET_WORKER_ERR_NOT_ALONE`, `GNUNET_WORKER_ERR_SIGNAL` and
                 `GNUNET_WORKER_ERR_INTERNAL_BUG`
@@ -508,10 +539,15 @@ extern int GNUNET_WORKER_asynch_destroy (
     handle might be passed to this function, and that will cause undefined
     behavior (probably a crash). This error must be handled exactly like a
     double free or corruption error, and you should always pay attention that
-    no more than one thread can destroy the worker. Please have a look at the
+    no more than one thread can destroy the worker. You must not handle
+    `GNUNET_WORKER_ERR_DOUBLE_FREE` using runtime checks unless you are
+    debugging your program; the way to handle this error is by writing code
+    that does not destroy a worker twice. Please have a look at the
     documentation of either `GNUNET_WORKER_adopt_running_scheduler()`,
     `GNUNET_WORKER_start_serving()` or `GNUNET_WORKER_create()` for more
-    information on how to avoid that his happens.
+    information on how to avoid that his happens. It is very likely that this
+    error code will be removed in the future and a call to `exit()` will appear
+    in its place.
 
     A return value of `GNUNET_WORKER_ERR_UNKNOWN` can only be due to a
     non-standard implementation of the `pthread_join()` and
@@ -520,15 +556,17 @@ extern int GNUNET_WORKER_asynch_destroy (
     A value of `GNUNET_WORKER_ERR_SIGNAL` indicates that it was not possible to
     notify the worker about the shutdown (this error can be thrown only if this
     function was not invoked from the worker thread). In this case there is not
-    much to do. The return value is caused by an error during `write()` into
+    much to do. The return value was caused by an error during `write()` into
     the worker's pipe. The only way to know whether the worker has received the
     message or not is by passing an `on_worker_end` routine during the creation
     of the worker and let it signal about the shutdown happening. If no signal
-    arrives it is then possible to try to wake up the worker for the shutdown
-    by using `GNUNET_WORKER_ping()`. A pipe breaking is a very unlikely event
-    to occur, and it might make sense to ignore the possible
-    `GNUNET_WORKER_ERR_SIGNAL` return value, assume that the worker has been
-    destroyed, and tolerate the rare events of workers turned into zombies.
+    arrives it is possible to try and wake up the worker for the shutdown by
+    using `GNUNET_WORKER_ping()` or by invoking this function again. A pipe
+    breaking is a very unlikely event to occur, and it might make sense to
+    ignore completely the possible `GNUNET_WORKER_ERR_SIGNAL` return value,
+    assume that the worker has been destroyed, and tolerate the rare events of
+    workers turned into zombies; or alternatively, it might be a good idea to
+    launch `exit()`, if a worker turns into a zombie.
 
     A value of `GNUNET_WORKER_ERR_INTERNAL_BUG` should never be returned;
     please fill a bug report if it happens.
@@ -541,11 +579,13 @@ extern int GNUNET_WORKER_synch_destroy (
 
 /**
 
-    @brief      Terminate a worker and free its memory (synchronous if it
-                happens within a certain time)
+    @brief      Terminate a worker and free its memory, waiting for the
+                scheduler to complete the shutdown (synchronous), but only if
+                this happens within a certain time, otherwise it will be
+                completed in parallel (asynchronous)
     @param      worker          The worker to destroy            [NON-NULLABLE]
     @param      absolute_time   The absolute time to wait until  [NON-NULLABLE]
-    @return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+    @return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
                 `GNUNET_WORKER_ERR_DOUBLE_FREE`, `GNUNET_WORKER_ERR_EXPIRED`,
                 `GNUNET_WORKER_ERR_INVALID_TIME`, `GNUNET_WORKER_ERR_UNKNOWN`
                 `GNUNET_WORKER_ERR_NOT_ALONE`, `GNUNET_WORKER_ERR_SIGNAL` and
@@ -563,7 +603,8 @@ extern int GNUNET_WORKER_synch_destroy (
     well). Directly launching `GNUNET_SCHEDULER_shutdown()` from the worker
     thread will have identical effects to launching this function from any
     other thread (i.e., the memory previously allocated for the worker will be
-    destroyed).
+    destroyed). When this function is called from the worker thread the
+    @p absolute_time argument is ignored.
 
     Any return value different than `GNUNET_WORKER_ERR_SIGNAL` indicate that
     the scheduler will eventually shut down. However only zero grants that the
@@ -578,10 +619,15 @@ extern int GNUNET_WORKER_synch_destroy (
     handle might be passed to this function, and that will cause undefined
     behavior (probably a crash). This error must be handled exactly like a
     double free or corruption error, and you should always pay attention that
-    no more than one thread can destroy the worker. Please have a look at the
+    no more than one thread can destroy the worker. You must not handle
+    `GNUNET_WORKER_ERR_DOUBLE_FREE` using runtime checks unless you are
+    debugging your program; the way to handle this error is by writing code
+    that does not destroy a worker twice. Please have a look at the
     documentation of either `GNUNET_WORKER_adopt_running_scheduler()`,
     `GNUNET_WORKER_start_serving()` or `GNUNET_WORKER_create()` for more
-    information on how to avoid that his happens.
+    information on how to avoid that his happens. It is very likely that this
+    error code will be removed in the future and a call to `exit()` will appear
+    in its place.
 
     A return value of `GNUNET_WORKER_ERR_UNKNOWN` can only be due to a
     non-standard implementation of the `pthread_timedjoin_np()` and
@@ -590,15 +636,17 @@ extern int GNUNET_WORKER_synch_destroy (
     A value of `GNUNET_WORKER_ERR_SIGNAL` indicates that it was not possible to
     notify the worker about the shutdown (this error can be thrown only if this
     function was not invoked from the worker thread). In this case there is not
-    much to do. The return value is caused by an error during `write()` into
+    much to do. The return value was caused by an error during `write()` into
     the worker's pipe. The only way to know whether the worker has received the
     message or not is by passing an `on_worker_end` routine during the creation
     of the worker and let it signal about the shutdown happening. If no signal
-    arrives it is then possible to try to wake up the worker for the shutdown
-    by using `GNUNET_WORKER_ping()`. A pipe breaking is a very unlikely event
-    to occur, and it might make sense to ignore the possible
-    `GNUNET_WORKER_ERR_SIGNAL` return value, assume that the worker has been
-    destroyed, and tolerate the rare events of workers turned into zombies.
+    arrives it is possible to try and wake up the worker for the shutdown by
+    using `GNUNET_WORKER_ping()` or by invoking this function again. A pipe
+    breaking is a very unlikely event to occur, and it might make sense to
+    ignore completely the possible `GNUNET_WORKER_ERR_SIGNAL` return value,
+    assume that the worker has been destroyed, and tolerate the rare events of
+    workers turned into zombies; or alternatively, it might be a good idea to
+    launch `exit()`, if a worker turns into a zombie.
 
     A value of `GNUNET_WORKER_ERR_INTERNAL_BUG` should never be returned;
     please fill a bug report if it happens.
@@ -615,7 +663,7 @@ extern int GNUNET_WORKER_timedsynch_destroy (
     @brief      Uninstall and destroy a worker without shutting down its
                 scheduler
     @param      worker          The worker to dismiss            [NON-NULLABLE]
-    @return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+    @return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
                 `GNUNET_WORKER_ERR_DOUBLE_FREE` and `GNUNET_WORKER_ERR_SIGNAL`
 
     Once invoked, this function uninstalls the load listener from the scheduler
@@ -642,10 +690,15 @@ extern int GNUNET_WORKER_timedsynch_destroy (
     handle might be passed to this function, and that will cause undefined
     behavior (probably a crash). This error must be handled exactly like a
     double free or corruption error, and you should always pay attention that
-    no more than one thread can destroy the worker. Please have a look at the
+    no more than one thread can destroy the worker. You must not handle
+    `GNUNET_WORKER_ERR_DOUBLE_FREE` using runtime checks unless you are
+    debugging your program; the way to handle this error is by writing code
+    that does not destroy a worker twice. Please have a look at the
     documentation of either `GNUNET_WORKER_adopt_running_scheduler()`,
     `GNUNET_WORKER_start_serving()` or `GNUNET_WORKER_create()` for more
-    information on how to avoid that his happens.
+    information on how to avoid that his happens. It is very likely that this
+    error code will be removed in the future and a call to `exit()` will appear
+    in its place.
 
 **/
 extern int GNUNET_WORKER_dismiss (
@@ -672,7 +725,7 @@ extern void * GNUNET_WORKER_get_data (
 
 /**
 
-    @brief      Get the handle of the current worker
+    @brief      Get the handle of the current worker if this is a worker thread
     @return     The worker installed in the current thread or `NULL` if this is
                 not a worker thread
 
@@ -695,9 +748,11 @@ extern GNUNET_WORKER_Handle * GNUNET_WORKER_get_current_handle (void);
     and wake up a worker after a `GNUNET_WORKER_ERR_SIGNAL` error was returned
     by the `GNUNET_WORKER_*_destroy()` function family.
 
+    If called from the worker thread this function is always successful.
+
 **/
 extern bool GNUNET_WORKER_ping (
-    const GNUNET_WORKER_Handle * const worker
+    GNUNET_WORKER_Handle * const worker
 );
 
 

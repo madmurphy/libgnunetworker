@@ -25,12 +25,12 @@ EXTRA_DIST = \
 	.editorconfig
 
 
-if DOC_IS_GENERATED
+if DIST_DOCS_DIR
 
 EXTRA_DIST += \
 	docs
 
-endif DOC_IS_GENERATED
+endif DIST_DOCS_DIR
 
 
 gnunetincludedir = $(includedir)/gnunet
@@ -120,7 +120,7 @@ distclean-local:
 # Update translations
 .PHONY: i18n-update
 i18n-update:
-	$(MKDIR_P) 'po/backups' && $(GREP) -o '^\s*\w\S\+' 'po/LINGUAS' | \
+	@$(MKDIR_P) 'po/backups' && $(GREP) -o '^\s*\w\S\+' 'po/LINGUAS' | \
 	while read _i_; do cp "po/$${_i_}.po" "po/backups/$${_i_}.po.bak" && \
 	(! test -e "po/@PACKAGE_TARNAME@.pot" || mv \
 	"po/@PACKAGE_TARNAME@.pot" "po/backups/@PACKAGE_TARNAME@.pot.bak") \
@@ -129,11 +129,28 @@ i18n-update:
 	"po/$${_i_}.po"; done;
 
 
-# Generate the documentation
-.PHONY: docs
-docs:
+# Update translations with intltool, if this is present
+.PHONY: intltool-update-all
+intltool-update-all:
+	@(cd po && for _COIN in `grep -v '^#' < 'LINGUAS'`; do echo \
+	"Updating \"$${_COIN}\"..."; intltool-update "$${_COIN}"; done; rm -f \
+	*.pot);
+
+
+if HAVE_DOXYGEN
+
+ # (Re-)generate the documentation
+ .PHONY: redocs
+ redocs:
 	$(MKDIR_P) 'docs' && doxygen 'autostuff/doxygen/doxyfile.conf' && cp \
 	'autostuff/chunks/docs.index.html.in' 'docs/index.html';
+
+
+ # Generate the documentation
+ docs:
+	$(MAKE) redocs;
+
+endif HAVE_DOXYGEN
 
 
 # Make the source directory depend on Autotools and a `bootstrap` script

@@ -51,7 +51,7 @@
 
 /**
 
-    @brief      The priority whereby the listener will be woken up after a beep
+    @brief      The priority whereby the listener will wake up after a beep
 
     What priority should we assign to this? The listener itself can schedule
     jobs with different priorities, including potentially high priority ones,
@@ -83,13 +83,23 @@
 
 /**
 
+    @brief      An alternative to `GNUNET_log()` that prints the name of this
+                library
+
+**/
+#define GNUNET_WORKER_log(kind, ...) \
+	GNUNET_log_from(kind, "worker-lib", __VA_ARGS__)
+
+
+/**
+
     @brief      Possible states of a worker
 
 **/
 enum GNUNET_WORKER_State {
     WORKER_IS_ALIVE = 0,    /**< The worker is alive and well **/
     WORKER_SAYS_BYE = 1,    /**< The worker is calling its `on_worker_end` **/
-    WORKER_IS_DYING = 2,    /**< The worker is now useless (shutting down) **/
+    WORKER_IS_DYING = 2,    /**< The worker might die at any moment now **/
     WORKER_IS_ZOMBIE = 3,   /**< The worker is unable to die (pipe is down) **/
     WORKER_IS_DEAD = 4      /**< The worker is dead, to be disposed soon **/
 };
@@ -104,6 +114,18 @@ enum GNUNET_WORKER_Destiny {
     WORKER_MUST_CONTINUE = 0,       /**< The worker must continue to live **/
     WORKER_MUST_SHUT_DOWN = 1,      /**< The worker must shut down **/
     WORKER_MUST_BE_DISMISSED = 2    /**< The worker must be dismissed **/
+};
+
+
+/**
+
+    @brief      Flags set during the creation of a worker
+
+**/
+enum GNUNET_WORKER_Flags {
+    WORKER_FLAG_NONE = 0,       /**< No flags **/
+    WORKER_FLAG_OWN_THREAD = 1, /**< The worker runs in a thread it created **/
+    WORKER_FLAG_IS_GUEST = 2    /**< The worker did not start the scheduler **/
 };
 
 
@@ -124,7 +146,7 @@ typedef struct GNUNET_WORKER_JobList {
     GNUNET_CallbackRoutine
         routine;                    /**< The job's routine **/
     struct GNUNET_SCHEDULER_Task
-        * scheduled_as;             /**< A handle for the scheduled job **/
+        * scheduled_as;             /**< A handle for the scheduled task **/
     enum GNUNET_SCHEDULER_Priority
         priority;                   /**< The job's priority **/
 } GNUNET_WORKER_JobList;
@@ -161,17 +183,17 @@ typedef struct GNUNET_WORKER_Handle {
     void
         * const data;           /**< See the `worker_data` argument **/
     pthread_t
-        const own_thread;       /**< The worker's thread (if we created it) **/
+        const worker_thread;    /**< The worker's thread **/
     struct GNUNET_NETWORK_FDSet
         * const beep_fds;       /**< GNUnet's file descriptor set **/
-    const int
-        beep_fd[2];             /**< The worker's pipe **/
+    int
+        const beep_fd[2];       /**< The worker's pipe **/
+    unsigned int
+        const flags;            /**< See `enum GNUNET_WORKER_Flags` **/
     atomic_int
         state;                  /**< Atomic; see `enum GNUNET_WORKER_State` **/
     enum GNUNET_WORKER_Destiny
         future_plans;           /**< Mutual exclusion via `::wishes_mutex` **/
-    bool
-        const thread_is_owned;  /**< `1` if we launched the worker thread **/
 } GNUNET_WORKER_Handle;
 
 

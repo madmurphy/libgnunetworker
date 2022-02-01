@@ -60,8 +60,12 @@ Some rules of thumb:
   codes, and return `GNUNET_WORKER_ERR_NO_MEMORY` when `malloc()` fails;
   otherwise (if functions do not return error codes) use `GNUNET_new()`, which
   never returns `NULL` and aborts if no more memory is available.
-* Use log messages only for unexpected or potentially fatal events that should
-  never happen; do not use log messages at all for ordinary failures
+* Use log messages only for errors caused by the user or for unexpected or
+  potentially fatal events that should never happen; do not use log messages at
+  all for ordinary failures
+* When you do print log messages, use `GNUNET_log()` for external or unexpected
+  events; use `GNUNET_WORKER_log()` instead for avoidable errors that are due
+  to misuse of this library
 
 */
 
@@ -122,49 +126,6 @@ static inline int thread_create_detached (
 
 /**
 
-	@brief      Undo what `GNUNET_WORKER_allocate()` did
-	@param      worker          The worker to free               [NON-NULLABLE]
-
-**/
-static inline void GNUNET_WORKER_free (
-	GNUNET_WORKER_Handle * const worker
-) {
-	close(worker->beep_fd[0]);
-	close(worker->beep_fd[1]);
-	GNUNET_NETWORK_fdset_destroy(worker->beep_fds);
-	requirement_uninit(&worker->scheduler_has_returned);
-	requirement_uninit(&worker->worker_is_disposable);
-	pthread_mutex_destroy(&worker->wishes_mutex);
-	pthread_mutex_destroy(&worker->kill_mutex);
-	free(worker);
-}
-
-
-/**
-
-	@brief      Function that must always follow `kill_handler()`
-	@param      worker          The worker to free               [NON-NULLABLE]
-
-	This function assumes that `kill_handler()` was called immediately before.
-	The reason why it has been split as a separate function is that
-	`kill_handler()` always requires the scheduler to be running, while this
-	function is often invoked after the scheduler has already returned.
-
-**/
-static inline void GNUNET_WORKER_after_kill (
-	GNUNET_WORKER_Handle * const worker
-) {
-	requirement_paint_green(&worker->scheduler_has_returned);
-	requirement_wait_for_green(&worker->worker_is_disposable);
-	currently_serving_as = NULL;
-	/*  This mutex was locked by `kill_handler()`  */
-	pthread_mutex_unlock(&worker->kill_mutex);
-	GNUNET_WORKER_free(worker);
-}
-
-
-/**
-
 	@brief      Launch `GNUNET_SCHEDULER_cancel()` on a pointer to a scheduled
 	            task and set the pointer to `NULL`
 	@param      sch_ptr         A pointer to a pointer to a scheduled task
@@ -185,65 +146,178 @@ static inline void clear_schedule (
 }
 
 
+/**
+
+	@brief      Free a pointed `GNUNET_WORKER_JobList` and set the pointer to
+	            `NULL`
+	@param      jobl_ptr        The pointer to set to `NULL`     [NON-NULLABLE]
+
+	The @p jobl_ptr paramenter cannot be `NULL`, however it can point to
+	`NULL`. If that is the case this function is no-op.
+
+**/
+static inline void job_list_clear_unlocked (
+	GNUNET_WORKER_JobList ** const jobl_ptr
+) {
+	GNUNET_WORKER_JobList * iter;
+	if ((iter = *jobl_ptr)) {
+		*jobl_ptr = NULL;
+		while (iter->next) {
+			free((iter = iter->next)->prev);
+		}
+		free(iter);
+	}
+}
+
+
+/**
+
+	@brief      Lock a mutex, free a pointed `GNUNET_WORKER_JobList`, set the
+	            pointer to `NULL` and unlock the mutex
+	@param      jobl_ptr        The pointer to set to `NULL`     [NON-NULLABLE]
+	@param      mutex_ptr       The mutex to lock and unlock     [NON-NULLABLE]
+
+	The @p jobl_ptr paramenter cannot be `NULL`, however it can point to
+	`NULL`. If that is the case this function is no-op.
+
+**/
+static inline void job_list_clear_locked (
+	GNUNET_WORKER_JobList ** const jobl_ptr,
+	pthread_mutex_t * mutex_ptr
+) {
+	pthread_mutex_lock(mutex_ptr);
+	job_list_clear_unlocked(jobl_ptr);
+	pthread_mutex_unlock(mutex_ptr);
+}
+
+
+/**
+
+	@brief      Undo what `GNUNET_WORKER_allocate()` did
+	@param      worker          The worker to free               [NON-NULLABLE]
+
+	@note   The two linked lists `GNUNET_WORKER_Handle::schedules` and
+	        `GNUNET_WORKER_Handle::wishlist` must be freed separately before
+	        calling this function.
+
+**/
+static inline void GNUNET_WORKER_unallocate (
+	GNUNET_WORKER_Handle * const worker
+) {
+	close(worker->beep_fd[0]);
+	close(worker->beep_fd[1]);
+	GNUNET_NETWORK_fdset_destroy(worker->beep_fds);
+	requirement_uninit(&worker->scheduler_has_returned);
+	requirement_uninit(&worker->worker_is_disposable);
+	pthread_mutex_destroy(&worker->wishes_mutex);
+	pthread_mutex_destroy(&worker->kill_mutex);
+	free(worker);
+}
+
+
+/**
+
+	@brief      Clear the environment and undo what `GNUNET_WORKER_allocate()`
+	            did
+	@param      worker          The worker to dispose            [NON-NULLABLE]
+
+	Please lock the `worker->kill_mutex` mutex before calling this function and
+	never unlock it.
+
+	The worker thread must not paint `worker->worker_is_disposable` red before
+	invoking this function, or it will hang forever.
+
+	@note   The two linked lists `GNUNET_WORKER_Handle::schedules` and
+	        `GNUNET_WORKER_Handle::wishlist` must be freed separately before
+	        calling this function.
+
+**/
+static inline void GNUNET_WORKER_dispose (
+	GNUNET_WORKER_Handle * const worker
+) {
+	requirement_paint_green(&worker->scheduler_has_returned);
+	requirement_wait_for_green(&worker->worker_is_disposable);
+	currently_serving_as = NULL;
+	pthread_mutex_unlock(&worker->kill_mutex);
+	GNUNET_WORKER_unallocate(worker);
+}
+
+
+/**
+
+	@brief      Clear the environment and undo what `GNUNET_WORKER_allocate()`
+	            did, but only if the worker was installed into a pre-existing
+	            scheduler via `GNUNET_WORKER_adopt_running_scheduler()`.
+	@param      worker          The worker to dispose            [NON-NULLABLE]
+
+	Please lock the `worker->kill_mutex` mutex before calling this function and
+	never unlock it.
+
+	If the worker is not a guest worker `GNUNET_WORKER_dispose()` will be
+	invoked later by `scheduler_launcher()`.
+
+	The worker thread must not paint `worker->worker_is_disposable` red before
+	invoking this function, or it might hang forever.
+
+	@note   The two linked lists `GNUNET_WORKER_Handle::schedules` and
+	        `GNUNET_WORKER_Handle::wishlist` must be freed separately before
+	        calling this function.
+
+**/
+static inline void GNUNET_WORKER_dispose_if_guest (
+	GNUNET_WORKER_Handle * const worker
+) {
+	if (worker->flags & WORKER_FLAG_IS_GUEST) {
+		GNUNET_WORKER_dispose(worker);
+	}
+}
+
+
+/**
+
+	@brief      Terminate a worker
+	@param      v_worker        The current `GNUNET_WORKER_Handle` passed as
+	                            `void *`                         [NON-NULLABLE]
+
+**/
+static inline void GNUNET_WORKER_terminate (
+	GNUNET_WORKER_Handle * const worker
+) {
+	if (worker->on_terminate) {
+		worker->on_terminate(worker->data);
+	}
+	atomic_store(&worker->state, WORKER_IS_DEAD);
+}
+
+
 
 	/*  FUNCTIONS  */
 
 
 /**
 
-	@brief      Terminate a worker (in most cases, handler added via
-	            `GNUNET_SCHEDULER_add_shutdown()`)
-	@param      v_worker        The current `GNUNET_WORKER_Handle` passed as
-	                            `void *`                         [NON-NULLABLE]
+	@brief      Cancel all the tasks in a pointed `GNUNET_WORKER_JobList`, free
+	            the memory and set the pointer to `NULL`
+	@param      jobl_ptr        The pointer to set to `NULL`     [NON-NULLABLE]
 
-	This function expects that `GNUNET_WORKER_after_kill()` is invoked
-	shortly after its return.
+	The @p jobl_ptr paramenter cannot be `NULL`, however it can point to
+	`NULL`. If that is the case this function is no-op.
 
 **/
-static void kill_handler (
-	void * const v_worker
+static void job_list_unschedule_and_clear (
+	GNUNET_WORKER_JobList ** const jobl_ptr
 ) {
-
-	#define worker ((GNUNET_WORKER_Handle *) v_worker)
 
 	GNUNET_WORKER_JobList * iter;
 
-	clear_schedule(&worker->listener_schedule);
-	worker->shutdown_schedule = NULL;
+	if ((iter = *jobl_ptr)) {
 
-	if (worker->on_terminate) {
-
-		atomic_store(&worker->state, WORKER_SAYS_BYE);
-		worker->on_terminate(worker->data);
-
-	}
-
-	/*  This mutex will be unlocked by `GNUNET_WORKER_after_kill()`  */
-	pthread_mutex_lock(&worker->kill_mutex);
-	atomic_store(&worker->state, WORKER_IS_DYING);
-	pthread_mutex_lock(&worker->wishes_mutex);
-
-	if ((iter = worker->wishlist)) {
-
-		while (iter->next) {
-
-			free((iter = iter->next)->prev);
-
-		}
-
-		free(iter);
-		worker->wishlist = NULL;
-
-	}
-
-	pthread_mutex_unlock(&worker->wishes_mutex);
-
-	if ((iter = worker->schedules)) {
+		*jobl_ptr = NULL;
 
 
-		/* \                                /\
-		\ */     unschedule_task:          /* \
-		 \/     ______________________     \ */
+		/* \                                 /\
+		\ */     unschedule_task:           /* \
+		 \/     _______________________     \ */
 
 
 		GNUNET_SCHEDULER_cancel(iter->scheduled_as);
@@ -256,11 +330,80 @@ static void kill_handler (
 		}
 
 		free(iter);
-		worker->schedules = NULL;
 
 	}
 
-	atomic_store(&worker->state, WORKER_IS_DEAD);
+}
+
+
+/**
+
+	@brief      Handler added via `GNUNET_SCHEDULER_add_shutdown()` when the
+	            shutdown is triggered by some of our functions
+	@param      v_worker        The current `GNUNET_WORKER_Handle` passed as
+	                            `void *`                         [NON-NULLABLE]
+
+**/
+static void attended_shutdown_handler (
+	void * const v_worker
+) {
+
+	#define worker ((GNUNET_WORKER_Handle *) v_worker)
+
+	/*  `worker->kill_mutex` will be unlocked by `GNUNET_WORKER_dispose()`
+		either now or later...  */
+
+	pthread_mutex_lock(&worker->kill_mutex);
+	worker->shutdown_schedule = NULL;
+	GNUNET_WORKER_terminate(worker);
+	GNUNET_WORKER_dispose_if_guest(worker);
+	#undef worker
+
+}
+
+
+/**
+
+	@brief      Handler added via `GNUNET_SCHEDULER_add_shutdown()` when the
+	            shutdown is triggered without invoking our functions
+	@param      v_worker        The current `GNUNET_WORKER_Handle` passed as
+	                            `void *`                         [NON-NULLABLE]
+
+**/
+static void unattended_shutdown_handler (
+	void * const v_worker
+) {
+
+	#define worker ((GNUNET_WORKER_Handle *) v_worker)
+
+	pthread_mutex_lock(&worker->kill_mutex);
+
+	if (
+		atomic_load(&worker->state) == WORKER_IS_ALIVE &&
+		(worker->flags & WORKER_FLAG_OWN_THREAD)
+	) {
+
+		pthread_detach(worker->worker_thread);
+
+	}
+
+	atomic_store(
+		&worker->state,
+		worker->on_terminate ?
+			WORKER_SAYS_BYE
+		:
+			WORKER_IS_DYING
+	);
+
+	clear_schedule(&worker->listener_schedule);
+	job_list_unschedule_and_clear(&worker->schedules);
+	job_list_clear_locked(&worker->wishlist, &worker->wishes_mutex);
+	worker->shutdown_schedule = NULL;
+	GNUNET_WORKER_terminate(worker);
+	GNUNET_WORKER_dispose_if_guest(worker);
+
+	/*  `worker->kill_mutex` will be unlocked by `GNUNET_WORKER_dispose()`
+		either now or later...  */
 
 	#undef worker
 
@@ -269,61 +412,43 @@ static void kill_handler (
 
 /**
 
-	@brief      Terminate and free a worker (in most cases, handler added via
-	            `GNUNET_SCHEDULER_add_shutdown()`)
-	@param      v_worker        The current `GNUNET_WORKER_Handle` passed as
-	                            `void *`                         [NON-NULLABLE]
-
-**/
-static void exit_handler (
-	void * const v_worker
-) {
-
-	kill_handler(v_worker);
-	GNUNET_WORKER_after_kill((GNUNET_WORKER_Handle *) v_worker);
-
-}
-
-
-/**
-
 	@brief      Perform a task and clean up afterwards
-	@param      v_wjob          The member of `GNUNET_WORKER_Handle::schedules`
+	@param      v_job           The member of `GNUNET_WORKER_Handle::schedules`
 	                            to run, passed as `void *`       [NON-NULLABLE]
 
 **/
 static void call_and_unlist_handler (
-	void * const v_wjob
+	void * const v_job
 ) {
 
-	#define wjob ((GNUNET_WORKER_JobList *) v_wjob)
+	#define job ((GNUNET_WORKER_JobList *) v_job)
 
-	if (wjob->assigned_to->schedules == wjob) {
+	if (job->assigned_to->schedules == job) {
 
 		/*  This is the first job in the list  */
 
-		wjob->assigned_to->schedules = wjob->next;
+		job->assigned_to->schedules = job->next;
 
-	} else if (wjob->prev) {
+	} else if (job->prev) {
 
 		/*  This is **not** the first job in the list  */
 
-		wjob->prev->next = wjob->next;
+		job->prev->next = job->next;
 
 	}
 
-	if (wjob->next) {
+	if (job->next) {
 
 		/*  This is **not** the last job in the list  */
 
-		wjob->next->prev = wjob->prev;
+		job->next->prev = job->prev;
 
 	}
 
-	wjob->routine(wjob->data);
-	free(wjob);
+	job->routine(job->data);
+	free(job);
 
-	#undef wjob
+	#undef job
 
 }
 
@@ -346,11 +471,16 @@ static void load_request_handler (
 
 	GNUNET_WORKER_JobList * const last_wish = worker->wishlist;
 	const int what_to_do = worker->future_plans;
-	unsigned char beep;
+	unsigned char beep = BEEP_CODE;
 
 	/*  Flush the pipe  */
 
-	if (read(worker->beep_fd[0], &beep, 1) != 1 || beep != BEEP_CODE) {
+	if (
+		(
+			read(worker->beep_fd[0], &beep, 1) != 1 &&
+			worker->listener_schedule
+		) || beep != BEEP_CODE
+	) {
 
 		GNUNET_log(
 			GNUNET_ERROR_TYPE_WARNING,
@@ -359,29 +489,43 @@ static void load_request_handler (
 
 	}
 
-	switch (what_to_do) {
+	if (what_to_do != WORKER_MUST_CONTINUE) {
 
-		case WORKER_MUST_SHUT_DOWN:
+		/*  Worker must die (possibly shutting down the scheduler)  */
 
-			pthread_mutex_unlock(&worker->wishes_mutex);
-			worker->listener_schedule = NULL;
+		pthread_mutex_lock(&worker->kill_mutex);
+		worker->listener_schedule = NULL;
+		job_list_clear_unlocked(&worker->wishlist);
+		pthread_mutex_unlock(&worker->wishes_mutex);
+		clear_schedule(&worker->shutdown_schedule);
+		job_list_unschedule_and_clear(&worker->schedules);
+		GNUNET_WORKER_terminate(worker);
+
+		/*  `worker->kill_mutex` will be unlocked by `GNUNET_WORKER_dispose()`
+			either now or later...  */
+
+		if (what_to_do == WORKER_MUST_SHUT_DOWN) {
+
+			GNUNET_WORKER_dispose_if_guest(worker);
 			GNUNET_SCHEDULER_shutdown();
 			return;
 
-		case WORKER_MUST_BE_DISMISSED:
+		} else {
 
-			pthread_mutex_unlock(&worker->wishes_mutex);
-			worker->listener_schedule = NULL;
-			clear_schedule(&worker->shutdown_schedule);
-			exit_handler(worker);
-			return;
+			/*  `what_to_do` equals `WORKER_MUST_BE_DISMISSED`  */
 
-		default:
+			GNUNET_WORKER_dispose(worker);
 
-			worker->wishlist = NULL;
-			pthread_mutex_unlock(&worker->wishes_mutex);
+		}
+
+		return;
 
 	}
+
+	/*  Worker must live  */
+
+	worker->wishlist = NULL;
+	pthread_mutex_unlock(&worker->wishes_mutex);
 
 	if (last_wish) {
 
@@ -445,7 +589,7 @@ static void load_request_handler (
 
 /**
 
-	@brief      The scheduler's main task that initializes the worker
+	@brief      The scheduler's main task that initializes a worker
 	@param      v_worker        The current `GNUNET_WORKER_Handle` passed as
 	                            `void *`                         [NON-NULLABLE]
 
@@ -457,7 +601,7 @@ static void worker_main_routine (
 	#define worker ((GNUNET_WORKER_Handle *) v_worker)
 
 	worker->shutdown_schedule = GNUNET_SCHEDULER_add_shutdown(
-		&kill_handler,
+		&unattended_shutdown_handler,
 		v_worker
 	);
 
@@ -489,7 +633,7 @@ static void worker_main_routine (
 	@return     Nothing
 
 **/
-static void * master_thread (
+static void * master_launcher (
 	void * v_worker
 ) {
 
@@ -513,7 +657,7 @@ static void * master_thread (
 	@return     Nothing
 
 **/
-static void * worker_thread (
+static void * scheduler_launcher (
 	void * v_worker
 ) {
 
@@ -536,14 +680,17 @@ static void * worker_thread (
 
 		GNUNET_log(
 			GNUNET_ERROR_TYPE_ERROR,
-			_("The scheduler has returned unexpectedly\n")
+			_(
+				"The worker thread's event loop has been unexpectedly cut off "
+				"- scheduler is down\n"
+			)
 		);
 
 		exit(ECANCELED);
 
 	}
 
-	GNUNET_WORKER_after_kill(worker);
+	GNUNET_WORKER_dispose(worker);
 	return NULL;
 
 	#undef worker
@@ -575,7 +722,7 @@ int GNUNET_WORKER_allocate (
 	const GNUNET_ConfirmRoutine on_worker_start,
 	const GNUNET_CallbackRoutine on_worker_end,
 	void * const worker_data,
-	const bool owned_thread
+	const unsigned int worker_flags
 ) {
 
 	GNUNET_WORKER_Handle
@@ -606,15 +753,13 @@ int GNUNET_WORKER_allocate (
 	*((GNUNET_ConfirmRoutine *) &new_worker->on_start) = on_worker_start;
 	*((GNUNET_CallbackRoutine *) &new_worker->on_terminate) = on_worker_end;
 	*((void **) &new_worker->data) = worker_data;
-
 	*((struct GNUNET_NETWORK_FDSet **) &new_worker->beep_fds) =
 		GNUNET_NETWORK_fdset_create();
-
 	new_worker->state = WORKER_IS_ALIVE;
 	new_worker->future_plans = WORKER_MUST_CONTINUE;
-	*((bool *) &new_worker->thread_is_owned) = owned_thread;
+	*((unsigned int *) &new_worker->flags) = worker_flags;
 
-	/*  Fields left undefined: `::own_thread`  */
+	/*  Fields left undefined: `::worker_thread`  */
 
 	GNUNET_NETWORK_fdset_set_native(
 		new_worker->beep_fds,
@@ -622,7 +767,7 @@ int GNUNET_WORKER_allocate (
 	);
 
 	*save_handle = new_worker;
-	return GNUNET_WORKER_ERR_OK;
+	return GNUNET_WORKER_SUCCESS;
 
 }
 
@@ -642,9 +787,10 @@ int GNUNET_WORKER_allocate (
 /**
 
 	@brief      Terminate a worker and free its memory, without waiting for the
-	            scheduler to return (asynchronous)
+	            scheduler to return -- this will be completed in parallel
+	            (asynchronous)
 	@param      worker          The worker to destroy            [NON-NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
 	            `GNUNET_WORKER_ERR_DOUBLE_FREE` and `GNUNET_WORKER_ERR_SIGNAL`
 
 */
@@ -652,29 +798,56 @@ int GNUNET_WORKER_asynch_destroy (
 	GNUNET_WORKER_Handle * const worker
 ) {
 
+	int retval = GNUNET_WORKER_SUCCESS;
+
+	requirement_paint_red(&worker->worker_is_disposable);
+
 	switch (atomic_load(&worker->state)) {
 
-		case WORKER_SAYS_BYE:
+		case WORKER_IS_ZOMBIE:
 
-			/*  It was still safe to call this function...  */
+			if (currently_serving_as == worker) {
 
-			return GNUNET_WORKER_ERR_OK;
+				/*  The zombie will be unzombified...  */
+
+				goto asynch_self_destroy;
+
+			}
+
+			if (write(worker->beep_fd[1], &BEEP_CODE, 1) == 1) {
+
+				/*  The zombie will be unzombified...  */
+
+				goto paint_green_and_exit;
+
+			}
+
+			retval = GNUNET_WORKER_ERR_SIGNAL;
+			goto paint_green_and_exit;
 
 		case WORKER_IS_ALIVE:
 
-			if (
-				currently_serving_as != worker &&
-				pthread_mutex_trylock(&worker->kill_mutex)
-			) {
+			if (pthread_mutex_trylock(&worker->kill_mutex)) {
+
+				if (worker->on_terminate) {
+
+		case WORKER_SAYS_BYE:
+
+					/*  It was still safe to call this function...  */
+
+					goto paint_green_and_exit;
+
+				}
 
 		default:
 
-				GNUNET_log(
+				GNUNET_WORKER_log(
 					GNUNET_ERROR_TYPE_ERROR,
 					_("Double free detected\n")
 				);
 
-				return GNUNET_WORKER_ERR_DOUBLE_FREE;
+				retval = GNUNET_WORKER_ERR_DOUBLE_FREE;
+				goto paint_green_and_exit;
 
 			}
 
@@ -692,47 +865,71 @@ int GNUNET_WORKER_asynch_destroy (
 
 		/*  The user has called this function from the worker thread  */
 
-		if (worker->thread_is_owned) {
+		if (worker->flags & WORKER_FLAG_OWN_THREAD) {
 
-			pthread_detach(worker->own_thread);
+			pthread_detach(worker->worker_thread);
 
 		}
 
+
+		/* \                                 /\
+		\ */     asynch_self_destroy:       /* \
+		 \/     _______________________     \ */
+
+
+		clear_schedule(&worker->listener_schedule);
+		job_list_unschedule_and_clear(&worker->schedules);
+		job_list_clear_locked(&worker->wishlist, &worker->wishes_mutex);
+		GNUNET_SCHEDULER_cancel(worker->shutdown_schedule);
+
+		worker->shutdown_schedule = GNUNET_SCHEDULER_add_shutdown(
+			&attended_shutdown_handler,
+			worker
+		);
+
+		pthread_mutex_unlock(&worker->kill_mutex);
+		requirement_paint_green(&worker->worker_is_disposable);
 		GNUNET_SCHEDULER_shutdown();
-		return GNUNET_WORKER_ERR_OK;
+		return GNUNET_WORKER_SUCCESS;
 
 	}
 
-	if (worker->thread_is_owned) {
+	/*  The user has **not** called this function from the worker thread  */
 
-		pthread_detach(worker->own_thread);
+	if (worker->flags & WORKER_FLAG_OWN_THREAD) {
+
+		pthread_detach(worker->worker_thread);
 
 	}
 
-	requirement_paint_red(&worker->worker_is_disposable);
 	pthread_mutex_lock(&worker->wishes_mutex);
 	worker->future_plans = WORKER_MUST_SHUT_DOWN;
-
-	int retval;
 
 	if (
 		!worker->wishlist &&
 		write(worker->beep_fd[1], &BEEP_CODE, 1) != 1
 	) {
 
-		/*  This will probably never happen, pipes don't break...  */
+		/*  Pipe is down...  */
 
 		atomic_store(&worker->state, WORKER_IS_ZOMBIE);
 		retval = GNUNET_WORKER_ERR_SIGNAL;
 
 	} else {
 
-		retval = GNUNET_WORKER_ERR_OK;
+		retval = GNUNET_WORKER_SUCCESS;
 
 	}
 
 	pthread_mutex_unlock(&worker->wishes_mutex);
 	pthread_mutex_unlock(&worker->kill_mutex);
+
+
+	/* \                                 /\
+	\ */     paint_green_and_exit:      /* \
+	 \/     _______________________     \ */
+
+
 	requirement_paint_green(&worker->worker_is_disposable);
 	return retval;
 
@@ -744,7 +941,7 @@ int GNUNET_WORKER_asynch_destroy (
 	@brief      Uninstall and destroy a worker without shutting down its
 	            scheduler
 	@param      worker          The worker to dismiss            [NON-NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
 	            `GNUNET_WORKER_ERR_DOUBLE_FREE` and `GNUNET_WORKER_ERR_SIGNAL`
 
 */
@@ -752,29 +949,56 @@ int GNUNET_WORKER_dismiss (
 	GNUNET_WORKER_Handle * const worker
 ) {
 
+	int retval = GNUNET_WORKER_SUCCESS;
+
+	requirement_paint_red(&worker->worker_is_disposable);
+
 	switch (atomic_load(&worker->state)) {
 
-		case WORKER_SAYS_BYE:
+		case WORKER_IS_ZOMBIE:
 
-			/*  It was still safe to call this function...  */
+			if (currently_serving_as == worker) {
 
-			return GNUNET_WORKER_ERR_OK;
+				/*  The zombie will be unzombified...  */
+
+				goto self_dismiss;
+
+			}
+
+			if (write(worker->beep_fd[1], &BEEP_CODE, 1) == 1) {
+
+				/*  The zombie will be unzombified...  */
+
+				goto paint_green_and_exit;
+
+			}
+
+			retval = GNUNET_WORKER_ERR_SIGNAL;
+			goto paint_green_and_exit;
 
 		case WORKER_IS_ALIVE:
 
-			if (
-				currently_serving_as != worker &&
-				pthread_mutex_trylock(&worker->kill_mutex)
-			) {
+			if (pthread_mutex_trylock(&worker->kill_mutex)) {
+
+				if (worker->on_terminate) {
+
+		case WORKER_SAYS_BYE:
+
+					/*  It was still safe to call this function...  */
+
+					goto paint_green_and_exit;
+
+				}
 
 		default:
 
-				GNUNET_log(
+				GNUNET_WORKER_log(
 					GNUNET_ERROR_TYPE_ERROR,
 					_("Double free detected\n")
 				);
 
-				return GNUNET_WORKER_ERR_DOUBLE_FREE;
+				retval = GNUNET_WORKER_ERR_DOUBLE_FREE;
+				goto paint_green_and_exit;
 
 			}
 
@@ -792,45 +1016,63 @@ int GNUNET_WORKER_dismiss (
 
 		/*  The user has called this function from the worker thread  */
 
-		if (worker->thread_is_owned) {
+		if (worker->flags & WORKER_FLAG_OWN_THREAD) {
 
-			pthread_detach(worker->own_thread);
+			pthread_detach(worker->worker_thread);
 
 		}
 
+
+		/* \                                 /\
+		\ */     self_dismiss:              /* \
+		 \/     _______________________     \ */
+
+
 		clear_schedule(&worker->shutdown_schedule);
-		exit_handler(worker);
-		return GNUNET_WORKER_ERR_OK;
+		clear_schedule(&worker->listener_schedule);
+		job_list_clear_locked(&worker->wishlist, &worker->wishes_mutex);
+		job_list_unschedule_and_clear(&worker->schedules);
+		GNUNET_WORKER_terminate(worker);
+		requirement_paint_green(&worker->worker_is_disposable);
+		/*  `GNUNET_WORKER_dispose()` will unlock `worker->kill_mutex`...  */
+		GNUNET_WORKER_dispose(worker);
+		return GNUNET_WORKER_SUCCESS;
 
 	}
 
-	if (worker->thread_is_owned) {
+	/*  The user has **not** called this function from the worker thread  */
 
-		pthread_detach(worker->own_thread);
+	if (worker->flags & WORKER_FLAG_OWN_THREAD) {
+
+		pthread_detach(worker->worker_thread);
 
 	}
 
-	requirement_paint_red(&worker->worker_is_disposable);
 	pthread_mutex_lock(&worker->wishes_mutex);
 	worker->future_plans = WORKER_MUST_BE_DISMISSED;
 
-	int retval;
-
 	if (!worker->wishlist && write(worker->beep_fd[1], &BEEP_CODE, 1) != 1) {
 
-		/*  This will probably never happen, pipes don't break...  */
+		/*  Pipe is down...  */
 
 		atomic_store(&worker->state, WORKER_IS_ZOMBIE);
 		retval = GNUNET_WORKER_ERR_SIGNAL;
 
 	} else {
 
-		retval = GNUNET_WORKER_ERR_OK;
+		retval = GNUNET_WORKER_SUCCESS;
 
 	}
 
 	pthread_mutex_unlock(&worker->wishes_mutex);
 	pthread_mutex_unlock(&worker->kill_mutex);
+
+
+	/* \                                 /\
+	\ */     paint_green_and_exit:      /* \
+	 \/     _______________________     \ */
+
+
 	requirement_paint_green(&worker->worker_is_disposable);
 	return retval;
 
@@ -839,9 +1081,10 @@ int GNUNET_WORKER_dismiss (
 
 /**
 
-	@brief      Terminate a worker and free its memory (synchronous)
+	@brief      Terminate a worker and free its memory, waiting for the
+	            scheduler to complete the shutdown (synchronous)
 	@param      worker          The worker to destroy            [NON-NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
 	            `GNUNET_WORKER_ERR_DOUBLE_FREE`, `GNUNET_WORKER_ERR_UNKNOWN`
 	            `GNUNET_WORKER_ERR_NOT_ALONE`, `GNUNET_WORKER_ERR_SIGNAL` and
 	            `GNUNET_WORKER_ERR_INTERNAL_BUG`
@@ -851,28 +1094,55 @@ int GNUNET_WORKER_synch_destroy (
 	GNUNET_WORKER_Handle * const worker
 ) {
 
+	requirement_paint_red(&worker->worker_is_disposable);
+
 	switch (atomic_load(&worker->state)) {
 
-		case WORKER_SAYS_BYE:
+		case WORKER_IS_ZOMBIE:
 
-			/*  It was still safe to call this function...  */
+			if (currently_serving_as == worker) {
 
-			return GNUNET_WORKER_ERR_NOT_ALONE;
+				/*  The zombie will be unzombified...  */
+
+				goto synch_self_destroy;
+
+			}
+
+			if (write(worker->beep_fd[1], &BEEP_CODE, 1) == 1) {
+
+				/*  The zombie will be unzombified...  */
+
+				requirement_paint_green(&worker->worker_is_disposable);
+				return GNUNET_WORKER_SUCCESS;
+
+			}
+
+			requirement_paint_green(&worker->worker_is_disposable);
+			return GNUNET_WORKER_ERR_SIGNAL;
 
 		case WORKER_IS_ALIVE:
 
-			if (
-				currently_serving_as != worker &&
-				pthread_mutex_trylock(&worker->kill_mutex)
-			) {
+			if (pthread_mutex_trylock(&worker->kill_mutex)) {
+
+				if (worker->on_terminate) {
+
+		case WORKER_SAYS_BYE:
+
+					/*  It was still safe to call this function...  */
+
+					requirement_paint_green(&worker->worker_is_disposable);
+					return GNUNET_WORKER_ERR_NOT_ALONE;
+
+				}
 
 		default:
 
-				GNUNET_log(
+				GNUNET_WORKER_log(
 					GNUNET_ERROR_TYPE_ERROR,
 					_("Double free detected\n")
 				);
 
+				requirement_paint_green(&worker->worker_is_disposable);
 				return GNUNET_WORKER_ERR_DOUBLE_FREE;
 
 			}
@@ -891,18 +1161,35 @@ int GNUNET_WORKER_synch_destroy (
 
 		/*  The user has called this function from the worker thread  */
 
-		if (worker->thread_is_owned) {
+		if (worker->flags & WORKER_FLAG_OWN_THREAD) {
 
-			pthread_detach(worker->own_thread);
+			pthread_detach(worker->worker_thread);
 
 		}
 
+
+		/* \                                 /\
+		\ */     synch_self_destroy:        /* \
+		 \/     _______________________     \ */
+
+
+		clear_schedule(&worker->shutdown_schedule);
+		clear_schedule(&worker->listener_schedule);
+		job_list_clear_locked(&worker->wishlist, &worker->wishes_mutex);
+		job_list_unschedule_and_clear(&worker->schedules);
+		GNUNET_WORKER_terminate(worker);
+		requirement_paint_green(&worker->worker_is_disposable);
+		GNUNET_WORKER_dispose_if_guest(worker);
 		GNUNET_SCHEDULER_shutdown();
-		return GNUNET_WORKER_ERR_OK;
+		return GNUNET_WORKER_SUCCESS;
+
+		/*  `worker->kill_mutex` will be unlocked by `GNUNET_WORKER_dispose()`
+			either now or later...  */
 
 	}
 
-	requirement_paint_red(&worker->worker_is_disposable);
+	/*  The user has **not** called this function from the worker thread  */
+
 	pthread_mutex_lock(&worker->wishes_mutex);
 	worker->future_plans = WORKER_MUST_SHUT_DOWN;
 
@@ -914,22 +1201,28 @@ int GNUNET_WORKER_synch_destroy (
 
 	if (tempval) {
 
-		/*  This will probably never happen, pipes don't break...  */
+		/*  Pipe is down...  */
+
+		if (worker->flags & WORKER_FLAG_OWN_THREAD) {
+
+			pthread_detach(worker->worker_thread);
+
+		}
 
 		atomic_store(&worker->state, WORKER_IS_ZOMBIE);
-		requirement_paint_green(&worker->worker_is_disposable);
 		pthread_mutex_unlock(&worker->kill_mutex);
+		requirement_paint_green(&worker->worker_is_disposable);
 		return GNUNET_WORKER_ERR_SIGNAL;
 
 	}
 
 	pthread_mutex_unlock(&worker->kill_mutex);
 
-	if (worker->thread_is_owned) {
+	if (worker->flags & WORKER_FLAG_OWN_THREAD) {
 
 		/*  We started the scheduler's thread: it must be joined  */
 
-		pthread_t thread_ref_copy = worker->own_thread;
+		pthread_t thread_ref_copy = worker->worker_thread;
 		requirement_paint_green(&worker->worker_is_disposable);
 		tempval = pthread_join(thread_ref_copy, NULL);
 
@@ -941,7 +1234,7 @@ int GNUNET_WORKER_synch_destroy (
 
 		switch (tempval) {
 
-			case __EOK__: return GNUNET_WORKER_ERR_OK;
+			case __EOK__: return GNUNET_WORKER_SUCCESS;
 
 			case EDEADLK: case EINVAL: case EPERM: case ESRCH:
 
@@ -963,7 +1256,10 @@ int GNUNET_WORKER_synch_destroy (
 
 		GNUNET_log(
 			GNUNET_ERROR_TYPE_WARNING,
-			_("`%s` has returned `%d` (unknown code)\n"),
+			_(
+				"`%s` has returned `%d` (unknown code) while waiting for the "
+				"worker thread to terminate\n"
+			),
 			"pthread_join()",
 			tempval
 		);
@@ -979,7 +1275,7 @@ int GNUNET_WORKER_synch_destroy (
 
 	switch (tempval) {
 
-		case __EOK__: return GNUNET_WORKER_ERR_OK;
+		case __EOK__: return GNUNET_WORKER_SUCCESS;
 
 		case EINVAL: case EPERM:
 
@@ -1001,7 +1297,10 @@ int GNUNET_WORKER_synch_destroy (
 
 	GNUNET_log(
 		GNUNET_ERROR_TYPE_WARNING,
-		_("`%s` has returned `%d` (unknown code)\n"),
+		_(
+			"`%s` has returned `%d` (unknown code) while waiting for the "
+			"worker thread to terminate\n"
+		),
 		"pthread_cond_wait()",
 		tempval
 	);
@@ -1013,11 +1312,13 @@ int GNUNET_WORKER_synch_destroy (
 
 /**
 
-	@brief      Terminate a worker and free its memory (synchronous if it
-	            happens within a certain time)
+	@brief      Terminate a worker and free its memory, waiting for the
+	            scheduler to complete the shutdown (synchronous), but only if
+	            this happens within a certain time, otherwise it will be
+	            completed in parallel (asynchronous)
 	@param      worker          The worker to destroy            [NON-NULLABLE]
 	@param      absolute_time   The absolute time to wait until  [NON-NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
 	            `GNUNET_WORKER_ERR_DOUBLE_FREE`, `GNUNET_WORKER_ERR_EXPIRED`,
 	            `GNUNET_WORKER_ERR_INVALID_TIME`, `GNUNET_WORKER_ERR_UNKNOWN`
 	            `GNUNET_WORKER_ERR_NOT_ALONE`, `GNUNET_WORKER_ERR_SIGNAL` and
@@ -1029,28 +1330,55 @@ int GNUNET_WORKER_timedsynch_destroy (
 	const struct timespec * const absolute_time
 ) {
 
+	requirement_paint_red(&worker->worker_is_disposable);
+
 	switch (atomic_load(&worker->state)) {
 
-		case WORKER_SAYS_BYE:
+		case WORKER_IS_ZOMBIE:
 
-			/*  It was still safe to call this function...  */
+			if (currently_serving_as == worker) {
 
-			return GNUNET_WORKER_ERR_NOT_ALONE;
+				/*  The zombie will be unzombified...  */
+
+				goto synch_self_destroy;
+
+			}
+
+			if (write(worker->beep_fd[1], &BEEP_CODE, 1) == 1) {
+
+				/*  The zombie will be unzombified...  */
+
+				requirement_paint_green(&worker->worker_is_disposable);
+				return GNUNET_WORKER_SUCCESS;
+
+			}
+
+			requirement_paint_green(&worker->worker_is_disposable);
+			return GNUNET_WORKER_ERR_SIGNAL;
 
 		case WORKER_IS_ALIVE:
 
-			if (
-				currently_serving_as != worker &&
-				pthread_mutex_trylock(&worker->kill_mutex)
-			) {
+			if (pthread_mutex_trylock(&worker->kill_mutex)) {
+
+				if (worker->on_terminate) {
+
+		case WORKER_SAYS_BYE:
+
+					/*  It was still safe to call this function...  */
+
+					requirement_paint_green(&worker->worker_is_disposable);
+					return GNUNET_WORKER_ERR_NOT_ALONE;
+
+				}
 
 		default:
 
-				GNUNET_log(
+				GNUNET_WORKER_log(
 					GNUNET_ERROR_TYPE_ERROR,
 					_("Double free detected\n")
 				);
 
+				requirement_paint_green(&worker->worker_is_disposable);
 				return GNUNET_WORKER_ERR_DOUBLE_FREE;
 
 			}
@@ -1069,18 +1397,35 @@ int GNUNET_WORKER_timedsynch_destroy (
 
 		/*  The user has called this function from the worker thread  */
 
-		if (worker->thread_is_owned) {
+		if (worker->flags & WORKER_FLAG_OWN_THREAD) {
 
-			pthread_detach(worker->own_thread);
+			pthread_detach(worker->worker_thread);
 
 		}
 
+
+		/* \                                 /\
+		\ */     synch_self_destroy:        /* \
+		 \/     _______________________     \ */
+
+
+		clear_schedule(&worker->shutdown_schedule);
+		clear_schedule(&worker->listener_schedule);
+		job_list_clear_locked(&worker->wishlist, &worker->wishes_mutex);
+		job_list_unschedule_and_clear(&worker->schedules);
+		GNUNET_WORKER_terminate(worker);
+		requirement_paint_green(&worker->worker_is_disposable);
+		GNUNET_WORKER_dispose_if_guest(worker);
 		GNUNET_SCHEDULER_shutdown();
-		return GNUNET_WORKER_ERR_OK;
+		return GNUNET_WORKER_SUCCESS;
+
+		/*  `worker->kill_mutex` will be unlocked by `GNUNET_WORKER_dispose()`
+			either now or later...  */
 
 	}
 
-	requirement_paint_red(&worker->worker_is_disposable);
+	/*  The user has **not** called this function from the worker thread  */
+
 	pthread_mutex_lock(&worker->wishes_mutex);
 	worker->future_plans = WORKER_MUST_SHUT_DOWN;
 
@@ -1092,22 +1437,28 @@ int GNUNET_WORKER_timedsynch_destroy (
 
 	if (tempval) {
 
-		/*  This will probably never happen, pipes don't break...  */
+		/*  Pipe is down...  */
+
+		if (worker->flags & WORKER_FLAG_OWN_THREAD) {
+
+			pthread_detach(worker->worker_thread);
+
+		}
 
 		atomic_store(&worker->state, WORKER_IS_ZOMBIE);
-		requirement_paint_green(&worker->worker_is_disposable);
 		pthread_mutex_unlock(&worker->kill_mutex);
+		requirement_paint_green(&worker->worker_is_disposable);
 		return GNUNET_WORKER_ERR_SIGNAL;
 
 	}
 
 	pthread_mutex_unlock(&worker->kill_mutex);
 
-	if (worker->thread_is_owned) {
+	if (worker->flags & WORKER_FLAG_OWN_THREAD) {
 
 		/*  We started the scheduler's thread: it must be joined  */
 
-		pthread_t thread_ref_copy = worker->own_thread;
+		pthread_t thread_ref_copy = worker->worker_thread;
 		requirement_paint_green(&worker->worker_is_disposable);
 		tempval = pthread_timedjoin_np(thread_ref_copy, NULL, absolute_time);
 
@@ -1119,7 +1470,7 @@ int GNUNET_WORKER_timedsynch_destroy (
 
 		switch (tempval) {
 
-			case __EOK__: return GNUNET_WORKER_ERR_OK;
+			case __EOK__: return GNUNET_WORKER_SUCCESS;
 
 			case EDEADLK: case EPERM: case ESRCH:
 
@@ -1145,7 +1496,10 @@ int GNUNET_WORKER_timedsynch_destroy (
 
 		GNUNET_log(
 			GNUNET_ERROR_TYPE_WARNING,
-			_("`%s` has returned `%d` (unknown code)\n"),
+			_(
+				"`%s` has returned `%d` (unknown code) while waiting for the "
+				"worker thread to terminate\n"
+			),
 			"pthread_timedjoin_np()",
 			tempval
 		);
@@ -1165,7 +1519,7 @@ int GNUNET_WORKER_timedsynch_destroy (
 
 	switch (tempval) {
 
-		case __EOK__: return GNUNET_WORKER_ERR_OK;
+		case __EOK__: return GNUNET_WORKER_SUCCESS;
 
 		case ETIMEDOUT: return GNUNET_WORKER_ERR_EXPIRED;
 
@@ -1191,7 +1545,10 @@ int GNUNET_WORKER_timedsynch_destroy (
 
 	GNUNET_log(
 		GNUNET_ERROR_TYPE_WARNING,
-		_("`%s` has returned `%d` (unknown code)\n"),
+		_(
+			"`%s` has returned `%d` (unknown code) while waiting for the "
+			"worker thread to terminate\n"
+		),
 		"pthread_cond_timedwait()",
 		tempval
 	);
@@ -1209,7 +1566,7 @@ int GNUNET_WORKER_timedsynch_destroy (
 	@param      job_priority    The priority of the task
 	@param      job_routine     The task to schedule             [NON-NULLABLE]
 	@param      job_data        Custom data to pass to the task      [NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
 	            `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
 	            `GNUNET_WORKER_ERR_INVALID_HANDLE`
 
@@ -1221,72 +1578,118 @@ int GNUNET_WORKER_push_load_with_priority (
 	void * const job_data
 ) {
 
+	requirement_paint_red(&worker->worker_is_disposable);
+
+	int retval = GNUNET_WORKER_SUCCESS;
+
 	switch (atomic_load(&worker->state)) {
 
 		case WORKER_IS_ALIVE:
 
-			requirement_paint_red(&worker->worker_is_disposable);
-			pthread_mutex_lock(&worker->wishes_mutex);
 			break;
+
+		case WORKER_IS_ZOMBIE:
+
+			if (currently_serving_as == worker) {
+
+				/*  The zombie will be unzombified...  */
+
+				/*
+
+				We return `GNUNET_WORKER_SUCCESS` here. It will appear as if
+				the job was scheduled and then immediately cancelled by the
+				shutdown, although none of it really took place...
+
+				*/
+
+				clear_schedule(&worker->listener_schedule);
+				requirement_paint_green(&worker->worker_is_disposable);
+				load_request_handler(worker);
+				return GNUNET_WORKER_SUCCESS;
+
+			}
+
+			if (write(worker->beep_fd[1], &BEEP_CODE, 1) != 1) {
+
+				retval = GNUNET_WORKER_ERR_SIGNAL;
+				goto paint_green_and_exit;
+
+			}
+
+			/*  The zombie will be unzombified...  */
+
+			/*  No case break (fallthrough)  */
 
 		case WORKER_SAYS_BYE:
 
 			/*
 
-			We return `GNUNET_WORKER_ERR_OK` here. It will appear as if the job
-			was scheduled and then immediately cancelled by the shutdown,
+			We return `GNUNET_WORKER_SUCCESS` here. It will appear as if the
+			job was scheduled and then immediately cancelled by the shutdown,
 			although none of it really took place...
 
 			*/
 
-			return GNUNET_WORKER_ERR_OK;
+			goto paint_green_and_exit;
 
 		default:
 
-			GNUNET_log(
+			GNUNET_WORKER_log(
 				GNUNET_ERROR_TYPE_ERROR,
-				_("Detected attempt to push load into a destroyed worker\n")
+				_(
+					"An attempt to push load into a destroyed worker has been "
+					"detected\n"
+				)
 			);
 
-			return GNUNET_WORKER_ERR_INVALID_HANDLE;
+			retval = GNUNET_WORKER_ERR_INVALID_HANDLE;
+			goto paint_green_and_exit;
 
 	}
 
-	int retval = GNUNET_WORKER_ERR_OK;
+	GNUNET_WORKER_JobList * new_job = malloc(sizeof(GNUNET_WORKER_JobList));
+
+	if (!new_job) {
+
+		retval = GNUNET_WORKER_ERR_NO_MEMORY;
+		goto paint_green_and_exit;
+
+	}
+
+	new_job->routine = job_routine;
+	new_job->data = job_data;
+	new_job->priority = job_priority;
+	new_job->assigned_to = worker;
+	new_job->prev = NULL;
 
 	if (currently_serving_as == worker) {
 
 		/*  The user has called this function from the worker thread  */
 
-		GNUNET_SCHEDULER_add_with_priority(
+		if (worker->schedules) {
+
+			worker->schedules->prev = new_job;
+
+		}
+
+		new_job->next = worker->schedules;
+		worker->schedules = new_job;
+
+		new_job->scheduled_as = GNUNET_SCHEDULER_add_with_priority(
 			job_priority,
-			job_routine,
-			job_data
+			call_and_unlist_handler,
+			new_job
 		);
 
-		goto unlock_and_exit;
+		goto paint_green_and_exit;
 
 	}
 
-	GNUNET_WORKER_JobList
-		* const new_job = malloc(sizeof(GNUNET_WORKER_JobList));
+	/*  The user has **not** called this function from the worker thread  */
 
-	if (!new_job) {
-
-		retval = GNUNET_WORKER_ERR_NO_MEMORY;
-		goto unlock_and_exit;
-
-	}
-
-	*new_job = (GNUNET_WORKER_JobList) {
-		.routine = job_routine,
-		.scheduled_as = NULL,
-		.data = job_data,
-		.priority = job_priority,
-		.assigned_to = worker,
-		.prev = NULL,
-		.next = worker->wishlist
-	};
+	new_job->scheduled_as = NULL;
+	pthread_mutex_lock(&worker->wishes_mutex);
+	new_job->next = worker->wishlist;
 
 	if (worker->wishlist) {
 
@@ -1299,24 +1702,24 @@ int GNUNET_WORKER_push_load_with_priority (
 
 		if (write(worker->beep_fd[1], &BEEP_CODE, 1) != 1) {
 
-			/*  Without a "beep" the list stays empty  */
+			/*  Without a "beep" the list stays empty...  */
 
 			worker->wishlist = NULL;
 			free(new_job);
 			retval = GNUNET_WORKER_ERR_SIGNAL;
-			goto unlock_and_exit;
 
 		}
 
 	}
 
-
-	/* \                                /\
-	\ */     unlock_and_exit:          /* \
-	 \/     ______________________     \ */
-
-
 	pthread_mutex_unlock(&worker->wishes_mutex);
+
+
+	/* \                                 /\
+	\ */     paint_green_and_exit:      /* \
+	 \/     _______________________     \ */
+
+
 	requirement_paint_green(&worker->worker_is_disposable);
 	return retval;
 
@@ -1337,7 +1740,7 @@ int GNUNET_WORKER_push_load_with_priority (
 	                                                                 [NULLABLE]
 	@param      worker_data         Custom user data retrievable at any moment
 	                                                                 [NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
 	            `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
 	            `GNUNET_WORKER_ERR_THREAD_CREATE`
 
@@ -1357,7 +1760,7 @@ int GNUNET_WORKER_create (
 		on_worker_start,
 		on_worker_end,
 		worker_data,
-		true
+		WORKER_FLAG_OWN_THREAD
 	);
 
 	if (tempval) {
@@ -1368,14 +1771,14 @@ int GNUNET_WORKER_create (
 
 	if (
 		pthread_create(
-			(pthread_t *) &worker->own_thread,
+			(pthread_t *) &worker->worker_thread,
 			NULL,
-			&worker_thread,
+			&scheduler_launcher,
 			worker
 		)
 	) {
 
-		GNUNET_WORKER_free(worker);
+		GNUNET_WORKER_unallocate(worker);
 		return GNUNET_WORKER_ERR_THREAD_CREATE;
 
 	}
@@ -1386,7 +1789,7 @@ int GNUNET_WORKER_create (
 
 	}
 
-	return GNUNET_WORKER_ERR_OK;
+	return GNUNET_WORKER_SUCCESS;
 
 }
 
@@ -1408,7 +1811,7 @@ int GNUNET_WORKER_create (
 	                                                                 [NULLABLE]
 	@param      worker_data         Custom user data retrievable at any moment
 	                                                                 [NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
 	            `GNUNET_WORKER_ERR_ALREADY_SERVING`,
 	            `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
 	            `GNUNET_WORKER_ERR_THREAD_CREATE`
@@ -1436,7 +1839,7 @@ int GNUNET_WORKER_start_serving (
 		on_worker_start,
 		on_worker_end,
 		worker_data,
-		false
+		WORKER_FLAG_NONE
 	);
 
 	if (tempval) {
@@ -1445,9 +1848,16 @@ int GNUNET_WORKER_start_serving (
 
 	}
 
-	if (master_routine && thread_create_detached(&master_thread, worker)) {
+	/*  This is not strictly necessary at the moment (`::worker_thread` can be
+		left undefined if we are not the ones who created the worker thread).
+		However we might want to add thread-related utilities to the GNUnet
+		Worker API in the future...  */
 
-		GNUNET_WORKER_free(worker);
+	*((pthread_t *) &worker->worker_thread) = pthread_self();
+
+	if (master_routine && thread_create_detached(&master_launcher, worker)) {
+
+		GNUNET_WORKER_unallocate(worker);
 		return GNUNET_WORKER_ERR_THREAD_CREATE;
 
 	}
@@ -1458,15 +1868,15 @@ int GNUNET_WORKER_start_serving (
 
 	}
 
-	worker_thread(worker);
-	return GNUNET_WORKER_ERR_OK;
+	scheduler_launcher(worker);
+	return GNUNET_WORKER_SUCCESS;
 
 }
 
 
 /**
 
-	@brief      Install a load listener for an already running scheduler and
+	@brief      Install a load listener into an already running scheduler and
 	            turn the latter into a worker
 	@param      save_handle         A placeholder for storing a handle for the
 	                                new worker created               [NULLABLE]
@@ -1477,7 +1887,7 @@ int GNUNET_WORKER_start_serving (
 	                                                                 [NULLABLE]
 	@param      worker_data         Custom user data retrievable at any moment
 	                                                                 [NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_ERR_OK` (`0`),
+	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
 	            `GNUNET_WORKER_ERR_ALREADY_SERVING`,
 	            `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
 	            `GNUNET_WORKER_ERR_THREAD_CREATE`
@@ -1502,7 +1912,7 @@ int GNUNET_WORKER_adopt_running_scheduler (
 		NULL,
 		on_worker_end,
 		worker_data,
-		false
+		WORKER_FLAG_IS_GUEST
 	);
 
 	if (tempval) {
@@ -1511,24 +1921,25 @@ int GNUNET_WORKER_adopt_running_scheduler (
 
 	}
 
+	/*  This is not strictly necessary at the moment (`::worker_thread` can be
+		left undefined if we are not the ones who created the worker thread).
+		However we might want to add thread-related utilities to the GNUnet
+		Worker API in the future...  */
+
+	*((pthread_t *) &currently_serving_as->worker_thread) = pthread_self();
+
 	if (
 		master_routine &&
-		thread_create_detached(&master_thread, currently_serving_as)
+		thread_create_detached(&master_launcher, currently_serving_as)
 	) {
 
-		GNUNET_WORKER_free(currently_serving_as);
+		GNUNET_WORKER_unallocate(currently_serving_as);
 		return GNUNET_WORKER_ERR_THREAD_CREATE;
 
 	}
 
-	if (save_handle) {
-
-		*save_handle = currently_serving_as;
-
-	}
-
 	currently_serving_as->shutdown_schedule = GNUNET_SCHEDULER_add_shutdown(
-		&exit_handler,
+		&unattended_shutdown_handler,
 		currently_serving_as
 	);
 
@@ -1541,14 +1952,20 @@ int GNUNET_WORKER_adopt_running_scheduler (
 		currently_serving_as
 	);
 
-	return GNUNET_WORKER_ERR_OK;
+	if (save_handle) {
+
+		*save_handle = currently_serving_as;
+
+	}
+
+	return GNUNET_WORKER_SUCCESS;
 
 }
 
 
 /**
 
-	@brief      Get the handle of the current worker
+	@brief      Get the handle of the current worker if this is a worker thread
 	@return     The worker installed in the current thread or `NULL` if this is
 	            not a worker thread
 
@@ -1584,8 +2001,20 @@ void * GNUNET_WORKER_get_data (
 
 **/
 bool GNUNET_WORKER_ping (
-	const GNUNET_WORKER_Handle * const worker
+	GNUNET_WORKER_Handle * const worker
 ) {
+
+	if (currently_serving_as == worker) {
+
+		/*  The user has called this function from the worker thread  */
+
+		clear_schedule(&worker->listener_schedule);
+		load_request_handler(worker);
+		return true;
+
+	}
+
+	/*  The user has **not** called this function from the worker thread  */
 
 	return write(worker->beep_fd[1], &BEEP_CODE, 1) == 1;
 

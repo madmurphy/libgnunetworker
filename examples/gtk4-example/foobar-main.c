@@ -110,6 +110,7 @@ static void foobar_main (
 	app_data->gnunet_config = config;
 	app_data->worker_is_running = false;
 	app_data->ui_is_running = false;
+	app_data->fs_query.paths = NULL;
 	g_mutex_init(&app_data->fs_query.indexed_mutex);
 
 	GNUNET_WORKER_start_serving(
