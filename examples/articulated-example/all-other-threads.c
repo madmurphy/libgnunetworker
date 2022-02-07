@@ -2,6 +2,7 @@
 
 /*  No function in this document is launched in the scheduler's thread  */
 
+#include <stdio.h>
 #include <stdbool.h>
 #include <pthread.h>
 #include <gnunet/gnunet_worker_lib.h>

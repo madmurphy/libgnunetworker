@@ -6,7 +6,7 @@ m4_include([autostuff/m4/ax_pthread.m4])
 AC_PREREQ([2.69])
 
 AC_INIT([GNUnet Worker],
-	[0.4.0],
+	[0.4.1],
 	[madmurphy333@gmail.com],
 	[lib]n4_mem([GL_PROJECT_NAME],
 		[gnunetworker]),
@@ -67,9 +67,9 @@ AC_ARG_WITH([pkgconfigdir],
 			[AS_VAR_COPY([pkgconfigdir], [withval])])])],
 	[:])
 
-NM_AUTO_QUERY_PROGS([find], [doxygen])
-
 AC_SUBST([pkgconfigdir])
+
+NM_AUTO_QUERY_PROGS([find], [doxygen])
 
 AM_GNU_GETTEXT([external])
 

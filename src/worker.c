@@ -111,7 +111,7 @@ _Thread_local static GNUNET_WORKER_Handle * currently_serving_as = NULL;
 
 **/
 static inline int thread_create_detached (
-	void * (* const start_routine) (void *),
+	const __thread_ftype__ start_routine,
 	void * const data
 ) {
 	pthread_t thr;
@@ -183,7 +183,7 @@ static inline void job_list_clear_unlocked (
 **/
 static inline void job_list_clear_locked (
 	GNUNET_WORKER_JobList ** const jobl_ptr,
-	pthread_mutex_t * mutex_ptr
+	pthread_mutex_t * const mutex_ptr
 ) {
 	pthread_mutex_lock(mutex_ptr);
 	job_list_clear_unlocked(jobl_ptr);
@@ -682,11 +682,11 @@ static void * scheduler_launcher (
 			GNUNET_ERROR_TYPE_ERROR,
 			_(
 				"The worker thread's event loop has been unexpectedly cut off "
-				"- scheduler is down\n"
+				"- the scheduler is down\n"
 			)
 		);
 
-		exit(ECANCELED);
+		exit(EINTR);
 
 	}
 

@@ -26,7 +26,7 @@ static void master_main (
 	/*  Make sure that threads have had enough time to start...  */
 	sleep(1);
 
-	/*  Shutdown the scheduler and wait until it returns  */
+	/*  Shut down the scheduler and wait until it returns  */
 	GNUNET_WORKER_synch_destroy(worker);
 
 }

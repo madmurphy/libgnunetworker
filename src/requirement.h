@@ -67,7 +67,7 @@ enum REQUIREMENT_InitValue {
 **/
 static inline void requirement_init (
 	Requirement * const requirement,
-	enum REQUIREMENT_InitValue initial_value
+	const enum REQUIREMENT_InitValue initial_value
 ) {
 	pthread_mutex_init(&requirement->req_mutex, NULL);
 	pthread_cond_init(&requirement->req_cond, NULL);
@@ -142,7 +142,7 @@ static inline int requirement_wait_for_green (
 /**
 	@brief      Wait until a requirement is fulfilled, with a time limit
 	@param      requirement     The requirement to wait for
-    @param      absolute_time   The absolute time to wait until
+	@param      absolute_time   The absolute time to wait until
 	@return     The result of `pthread_cond_timedwait()`
 **/
 static inline int requirement_timedwait_for_green (

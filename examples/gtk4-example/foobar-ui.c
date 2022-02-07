@@ -28,7 +28,8 @@
 
 	@file       foobar-ui.c
 	@brief      Functions for the GTK thread; every time we want to signal the
-	            GNUnet thread we use `GNUNET_WORKER_push_load()`.
+	            GNUnet thread we use `GNUNET_WORKER_push_load_with_priority()`
+	            or `GNUNET_WORKER_push_load()`.
 
 **/
 
@@ -67,7 +68,7 @@ typedef struct UISession_T {
 
 **/
 enum {
-	PF_COL_PATHS = 0,
+	PF_COL_PATH = 0,
 	PF_NUM_COLS
 };
 
@@ -143,7 +144,7 @@ gboolean query_callback_idle (
 				gtk_list_store_set(
 					ui_data->list_store,
 					&iter,
-					PF_COL_PATHS, (gchar *) item->data,
+					PF_COL_PATH, (gchar *) item->data,
 					-1
 				);
 
@@ -283,7 +284,7 @@ static void on_foobar_app_activate (
 	gtk_widget_set_valign(box, GTK_ALIGN_START);
 	gtk_tree_view_column_set_title(col, "Path");
 	gtk_tree_view_column_pack_start(col, rend, true);
-	gtk_tree_view_column_set_attributes(col, rend, "text", PF_COL_PATHS, NULL);
+	gtk_tree_view_column_set_attributes(col, rend, "text", PF_COL_PATH, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(tree), col);
 	gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), tree);
 

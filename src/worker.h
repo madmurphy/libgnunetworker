@@ -75,6 +75,16 @@
 
 /**
 
+    @brief      An alternative to `GNUNET_log()` that prints the name of this
+                module
+
+**/
+#define GNUNET_WORKER_log(kind, ...) \
+	GNUNET_log_from(kind, "worker-lib", __VA_ARGS__)
+
+
+/**
+
     @brief      A generic "success" alias for the `pthread_*()` function family
 
 **/
@@ -83,12 +93,12 @@
 
 /**
 
-    @brief      An alternative to `GNUNET_log()` that prints the name of this
-                library
+    @brief      The function type requested by `pthread_create()`
 
 **/
-#define GNUNET_WORKER_log(kind, ...) \
-	GNUNET_log_from(kind, "worker-lib", __VA_ARGS__)
+typedef void * (* __thread_ftype__) (
+	void * thread_data
+);
 
 
 /**

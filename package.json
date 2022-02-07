@@ -1,6 +1,6 @@
 {
 	"name": "libgnunetworker",
-	"version": "0.4.0",
+	"version": "0.4.1",
 	"description": "Multithreading with GNUnet",
 	"homepage": "https://github.com/madmurphy/libgnunetworker",
 	"author": "madmurphy333@gmail.com",
@@ -10,9 +10,10 @@
 		"url": "https://github.com/madmurphy/libgnunetworker.git"
 	},
 	"src": [
+		"include/gnunet_worker_lib.h",
+		"src/requirement.h",
 		"src/worker.c",
-		"src/worker.h",
-		"include/gnunet_worker_lib.h"
+		"src/worker.h"
 	],
 	"bugs": {
 		"url": "https://github.com/madmurphy/libgnunetworker/issues",

@@ -96,7 +96,7 @@ void clear_query_context (
 	@param      v_app_data      The data shared between threads, passed as a
 	                            `void *` pointer
 	@param      path            The path of the indexed file
-	@param      file_id         The file id
+	@param      file_id         The file's id
 	@return     Either `GNUNET_OK` or `GNUNET_SYSERR`
 
 **/

@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: libgnunetworker 0.4.0\n"
+"Project-Id-Version: libgnunetworker 0.4.1\n"
 "Report-Msgid-Bugs-To: madmurphy333@gmail.com\n"
-"POT-Creation-Date: 2022-02-01 21:22+0000\n"
-"PO-Revision-Date: 2022-02-01 21:22+0000\n"
+"POT-Creation-Date: 2022-02-06 11:03+0000\n"
+"PO-Revision-Date: 2022-02-06 11:03+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Italian <tp@lists.linux.it>\n"
 "Language: it\n"
@@ -23,10 +23,10 @@ msgstr "Impossibile leggere la notifica inviata al worker thread\n"
 
 #: src/worker.c:684
 msgid ""
-"The worker thread's event loop has been unexpectedly cut off - scheduler is "
-"down\n"
+"The worker thread's event loop has been unexpectedly cut off - the scheduler "
+"is down\n"
 msgstr ""
-"Il loop degli eventi del worker thread è stato interrotto inaspettatamente - "
+"Il loop degli eventi del worker thread è stato inaspettatamente interrotto - "
 "lo scheduler si è arrestato\n"
 
 #: src/worker.c:846 src/worker.c:997 src/worker.c:1142 src/worker.c:1378

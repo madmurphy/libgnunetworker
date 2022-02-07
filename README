@@ -10,7 +10,8 @@ Overview
 As it is often the case with network applications, **GNUnet** is built
 following a single-threaded event-driven model. This is an optimal model when
 dealing with high concurrency scenarios, but can be problematic in other
-contexts (like, for example, graphical user interfaces).
+contexts (like, for example, graphical user interfaces, which normally have
+their own event loop).
 
 To accomplish its event-driven flow, **GNUnet** uses a scheduler. Once such
 scheduler is started, it is not designed to be invoked by other threads, but
@@ -79,7 +80,7 @@ int main (const int argc, const char * const * const argv) {
     /*  Make sure that threads have had enough time to start...  */
     sleep(1);
 
-    /*  Shutdown the scheduler and wait until it returns  */
+    /*  Shut down the scheduler and wait until it returns  */
     GNUNET_WORKER_synch_destroy(my_worker);
 
     return 0;

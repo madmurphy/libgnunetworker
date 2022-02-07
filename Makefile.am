@@ -139,14 +139,14 @@ intltool-update-all:
 
 if HAVE_DOXYGEN
 
- # (Re-)generate the documentation
+ # Generate the documentation in any case
  .PHONY: redocs
  redocs:
 	$(MKDIR_P) 'docs' && doxygen 'autostuff/doxygen/doxyfile.conf' && cp \
 	'autostuff/chunks/docs.index.html.in' 'docs/index.html';
 
 
- # Generate the documentation
+ # Generate the documentation if missing
  docs:
 	$(MAKE) redocs;
 

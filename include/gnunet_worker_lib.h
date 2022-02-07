@@ -76,8 +76,7 @@ enum GNUNET_WORKER_ErrNo {
                                                  thread **/
     GNUNET_WORKER_ERR_SIGNAL = 9,           /**< Error in the communication
                                                  with the worker **/
-    GNUNET_WORKER_ERR_UNKNOWN = 10,         /**< Unknown error **/
-
+    GNUNET_WORKER_ERR_UNKNOWN = 10,         /**< Unknown/unexpected error **/
 
     /*  Errors that need a change in GNUnet Worker's bad code to be fixed  */
     GNUNET_WORKER_ERR_INTERNAL_BUG = 127    /**< Unexpected error, probably due
@@ -336,7 +335,7 @@ extern int GNUNET_WORKER_adopt_running_scheduler (
 
 /**
 
-    @brief      Schedule a new function for the worker thread, with a priority
+    @brief      Schedule a new function for the worker, with a priority
     @param      worker          The worker for which the task must be scheduled
                                                                  [NON-NULLABLE]
     @param      job_priority    The priority of the task
@@ -385,8 +384,7 @@ extern int GNUNET_WORKER_push_load_with_priority (
 
 /**
 
-    @brief      Schedule a new function for the worker thread with default
-                priority
+    @brief      Schedule a new function for the worker, with default priority
     @param      worker          A pointer to the worker where the task must be
                                 scheduled                        [NON-NULLABLE]
     @param      job_routine     The task to schedule             [NON-NULLABLE]
@@ -671,7 +669,7 @@ extern int GNUNET_WORKER_timedsynch_destroy (
     live. In short: it turns a worker thread back into a classic GNUnet
     scheduler, without any multithreading facility and without a load listener.
 
-    Although it can be invoked on any worker, independently on how this was
+    Although it can be invoked on any worker, independently from how this was
     created, `GNUNET_WORKER_dismiss()` is often paired with
     `GNUNET_WORKER_adopt_running_scheduler()`, for making a scheduler serve as
     a worker only temporarily, before continuing its work without interferences
@@ -748,7 +746,7 @@ extern GNUNET_WORKER_Handle * GNUNET_WORKER_get_current_handle (void);
     and wake up a worker after a `GNUNET_WORKER_ERR_SIGNAL` error was returned
     by the `GNUNET_WORKER_*_destroy()` function family.
 
-    If called from the worker thread this function is always successful.
+    If called from the worker thread `GNUNET_WORKER_ping()` never fails.
 
 **/
 extern bool GNUNET_WORKER_ping (
