@@ -33,7 +33,6 @@
 **/
 
 
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdatomic.h>
 #include <gnunet/platform.h>
@@ -215,7 +214,7 @@ void cancel_indexed_query (
 	@return     `1` if the scheduler must stay alive, `0` if it must shut down
 
 **/
-bool fs_service_start_check (
+GNUNET_WORKER_LifeInstructions fs_service_start_check (
 	void * const v_app_data
 ) {
 
@@ -239,12 +238,12 @@ bool fs_service_start_check (
 			"Unable to interrogate the filesharing service - abort\n"
 		);
 
-		return false;
+		return GNUNET_WORKER_DESTRUCTION;
 
 	}
 
 	atomic_store(&app_data->worker_is_running, true);
-	return true;
+	return GNUNET_WORKER_LONG_LIFE;
 
 	#undef app_data
 

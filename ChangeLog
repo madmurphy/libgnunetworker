@@ -2,6 +2,21 @@ Change Log
 ==========
 
 
+## 0.5.0 (2022-02-13)
+
+Changes:
+
+* The semantics of the `on_worker_start` routine has changed, and the function
+  can now return more precise instructions about what must be done, after it
+  returns, with its worker. Please be aware that **this breaks binary
+  compatibility with previous versions of this library**
+* The opaque `struct` that contains a worker has been renamed to
+  `GNUNET_WORKER_Instance`, while its former `GNUNET_WORKER_Handle` identifier
+  is now being used for a pointer to it (source compatibility break)
+* Documentation
+* Examples
+
+
 ## 0.4.1 (2022-02-07)
 
 Changes:

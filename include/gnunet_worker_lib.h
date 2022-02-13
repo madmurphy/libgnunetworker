@@ -88,10 +88,36 @@ enum GNUNET_WORKER_ErrNo {
 
 /**
 
-    @brief      A handle for a worker
+    @brief      Future plans for a worker
 
 **/
-typedef struct GNUNET_WORKER_Handle GNUNET_WORKER_Handle;
+typedef enum GNUNET_WORKER_LifeInstructions {
+    GNUNET_WORKER_LONG_LIFE = 0,    /**< The worker must continue to live **/
+    GNUNET_WORKER_DESTRUCTION = 1,  /**< The worker must be destroyed **/
+    GNUNET_WORKER_DISMISSAL = 2     /**< The worker must be dismissed **/
+} GNUNET_WORKER_LifeInstructions;
+
+
+/**
+
+    @brief      A worker (opaque)
+
+    `GNUNET_WORKER_Instance *` and `GNUNET_WORKER_Handle` may be used
+    interchangeably.
+
+**/
+typedef struct GNUNET_WORKER_Instance GNUNET_WORKER_Instance;
+
+
+/**
+
+    @brief      A handle for a worker
+
+    `GNUNET_WORKER_Instance *` and `GNUNET_WORKER_Handle` may be used
+    interchangeably.
+
+**/
+typedef struct GNUNET_WORKER_Instance * GNUNET_WORKER_Handle;
 
 
 /**
@@ -106,10 +132,16 @@ typedef void (* GNUNET_CallbackRoutine) (
 
 /**
 
-    @brief      Generic confirm callback function
+    @brief      Callback function for deciding about a worker's destiny
+
+    The return value of this function will decide whether the worker must be
+    immediately destroyed with its scheduler being shut down
+    (`GNUNET_WORKER_DESTRUCTION`), destroyed without its scheduler being shut
+    down (`GNUNET_WORKER_DISMISSAL`), or instead must continue to live
+    (`GNUNET_WORKER_LONG_LIFE`).
 
 **/
-typedef bool (* GNUNET_ConfirmRoutine) (
+typedef GNUNET_WORKER_LifeInstructions (* GNUNET_WORKER_LifeRoutine) (
     void * data
 );
 
@@ -120,7 +152,7 @@ typedef bool (* GNUNET_ConfirmRoutine) (
 
 **/
 typedef void (* GNUNET_WORKER_MasterRoutine) (
-    GNUNET_WORKER_Handle * worker,
+    GNUNET_WORKER_Handle worker,
     void * data
 );
 
@@ -132,8 +164,8 @@ typedef void (* GNUNET_WORKER_MasterRoutine) (
                                     new worker created               [NULLABLE]
     @param      on_worker_start     The first routine invoked by the worker,
                                     with @p worker_data passed as argument; the
-                                    scheduler will be immediately interrupted
-                                    if this function returns `false` [NULLABLE]
+                                    return value of this function determines
+                                    the destiny of the worker        [NULLABLE]
     @param      on_worker_end       The last routine invoked by the worker,
                                     with @p worker_data passed as argument
                                                                      [NULLABLE]
@@ -164,6 +196,12 @@ typedef void (* GNUNET_WORKER_MasterRoutine) (
     you must use the @p on_worker_end routine to set a global variable to some
     value that prevents other threads to use the worker's address ever again.
 
+    @note   The `on_worker_end` routine, if present, will be invoked also when
+            `on_worker_start` returns a non-zero value and the worker is
+            immediately destroyed; this is so because the former routine might
+            still need to advertise other threads about the worker's
+            destruction.
+
     If @p save_handle is not `NULL`, it will be used to store a handle for the
     new worker before exiting. If the function returns a non-zero value the
     original address of @p save_handle will be left untouched.
@@ -174,8 +212,8 @@ typedef void (* GNUNET_WORKER_MasterRoutine) (
 
 **/
 extern int GNUNET_WORKER_create (
-    GNUNET_WORKER_Handle ** const save_handle,
-    const GNUNET_ConfirmRoutine on_worker_start,
+    GNUNET_WORKER_Handle * const save_handle,
+    const GNUNET_WORKER_LifeRoutine on_worker_start,
     const GNUNET_CallbackRoutine on_worker_end,
     void * const worker_data
 );
@@ -199,8 +237,8 @@ extern int GNUNET_WORKER_create (
                                     `GNUNET_WORKER_push_load()`)     [NULLABLE]
     @param      on_worker_start     The first routine invoked by the worker,
                                     with @p worker_data passed as argument; the
-                                    scheduler will be immediately interrupted
-                                    if this function returns `false` [NULLABLE]
+                                    return value of this function determines
+                                    the destiny of the worker        [NULLABLE]
     @param      on_worker_end       The last routine invoked by the worker,
                                     with @p worker_data passed as argument
                                                                      [NULLABLE]
@@ -254,11 +292,17 @@ extern int GNUNET_WORKER_create (
     you must use the @p on_worker_end routine to set a global variable to some
     value that prevents other threads to use the worker's address ever again.
 
+    @note   The `on_worker_end` routine, if present, will be invoked also when
+            `on_worker_start` returns a non-zero value and the worker is
+            immediately destroyed; this is so because the former routine might
+            still need to advertise other threads about the worker's
+            destruction.
+
 **/
 extern int GNUNET_WORKER_start_serving (
-    GNUNET_WORKER_Handle ** const save_handle,
+    GNUNET_WORKER_Handle * const save_handle,
     const GNUNET_WORKER_MasterRoutine master_routine,
-    const GNUNET_ConfirmRoutine on_worker_start,
+    const GNUNET_WORKER_LifeRoutine on_worker_start,
     const GNUNET_CallbackRoutine on_worker_end,
     void * const worker_data
 );
@@ -324,9 +368,15 @@ extern int GNUNET_WORKER_start_serving (
     you must use the @p on_worker_end routine to set a global variable to some
     value that prevents other threads to use the worker's address ever again.
 
+    @note   The `on_worker_end` routine, if present, will be invoked also when
+            `on_worker_start` returns a non-zero value and the worker is
+            immediately destroyed; this is so because the former routine might
+            still need to advertise other threads about the worker's
+            destruction.
+
 **/
 extern int GNUNET_WORKER_adopt_running_scheduler (
-    GNUNET_WORKER_Handle ** const save_handle,
+    GNUNET_WORKER_Handle * const save_handle,
     const GNUNET_WORKER_MasterRoutine master_routine,
     const GNUNET_CallbackRoutine on_worker_end,
     void * const worker_data
@@ -375,7 +425,7 @@ extern int GNUNET_WORKER_adopt_running_scheduler (
 
 **/
 extern int GNUNET_WORKER_push_load_with_priority (
-    GNUNET_WORKER_Handle * const worker,
+    const GNUNET_WORKER_Handle worker,
     const enum GNUNET_SCHEDULER_Priority job_priority,
     const GNUNET_CallbackRoutine job_routine,
     void * const job_data
@@ -385,8 +435,8 @@ extern int GNUNET_WORKER_push_load_with_priority (
 /**
 
     @brief      Schedule a new function for the worker, with default priority
-    @param      worker          A pointer to the worker where the task must be
-                                scheduled                        [NON-NULLABLE]
+    @param      worker          The worker for which the task must be scheduled
+                                                                 [NON-NULLABLE]
     @param      job_routine     The task to schedule             [NON-NULLABLE]
     @param      job_data        Custom data to pass to the task      [NULLABLE]
     @return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
@@ -424,7 +474,7 @@ extern int GNUNET_WORKER_push_load_with_priority (
 
 **/
 static inline int GNUNET_WORKER_push_load (
-    GNUNET_WORKER_Handle * const worker,
+    const GNUNET_WORKER_Handle worker,
     const GNUNET_CallbackRoutine job_routine,
     void * const job_data
 ) {
@@ -495,7 +545,7 @@ static inline int GNUNET_WORKER_push_load (
 
 **/
 extern int GNUNET_WORKER_asynch_destroy (
-    GNUNET_WORKER_Handle * const worker
+    const GNUNET_WORKER_Handle worker
 );
 
 
@@ -571,7 +621,7 @@ extern int GNUNET_WORKER_asynch_destroy (
 
 **/
 extern int GNUNET_WORKER_synch_destroy (
-    GNUNET_WORKER_Handle * const worker
+    const GNUNET_WORKER_Handle worker
 );
 
 
@@ -651,7 +701,7 @@ extern int GNUNET_WORKER_synch_destroy (
 
 **/
 extern int GNUNET_WORKER_timedsynch_destroy (
-    GNUNET_WORKER_Handle * const worker,
+    const GNUNET_WORKER_Handle worker,
     const struct timespec * const absolute_time
 );
 
@@ -700,7 +750,7 @@ extern int GNUNET_WORKER_timedsynch_destroy (
 
 **/
 extern int GNUNET_WORKER_dismiss (
-    GNUNET_WORKER_Handle * const worker
+    const GNUNET_WORKER_Handle worker
 );
 
 
@@ -717,7 +767,7 @@ extern int GNUNET_WORKER_dismiss (
 
 **/
 extern void * GNUNET_WORKER_get_data (
-    const GNUNET_WORKER_Handle * const worker
+    const GNUNET_WORKER_Handle worker
 );
 
 
@@ -733,7 +783,7 @@ extern void * GNUNET_WORKER_get_data (
     not invoked from the worker thread).
 
 **/
-extern GNUNET_WORKER_Handle * GNUNET_WORKER_get_current_handle (void);
+extern GNUNET_WORKER_Handle GNUNET_WORKER_get_current_handle (void);
 
 
 /**
@@ -750,7 +800,7 @@ extern GNUNET_WORKER_Handle * GNUNET_WORKER_get_current_handle (void);
 
 **/
 extern bool GNUNET_WORKER_ping (
-    GNUNET_WORKER_Handle * const worker
+    const GNUNET_WORKER_Handle worker
 );
 
 

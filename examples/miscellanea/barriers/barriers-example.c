@@ -18,21 +18,25 @@ static void task_for_the_scheduler (void * const data) {
 }
 
 
-static bool confirm_startup (void * const data) {
+static GNUNET_WORKER_LifeInstructions confirm_startup (void * const data) {
 
 	/*  In the unlikely event that `pthread_barrier_wait()` fails we kill the
 		worker...  */
 
-	return pthread_barrier_wait(
-		&worker_ready_barrier
-	) == PTHREAD_BARRIER_SERIAL_THREAD;
+	return
+		pthread_barrier_wait(
+			&worker_ready_barrier
+		) == PTHREAD_BARRIER_SERIAL_THREAD ?
+			GNUNET_WORKER_LONG_LIFE
+		:
+			GNUNET_WORKER_DESTRUCTION;
 
 }
 
 
 int main (const int argc, const char * const * const argv) {
 
-	GNUNET_WORKER_Handle * my_worker;
+	GNUNET_WORKER_Handle my_worker;
 
 	/*  Create a separate thread where GNUnet's scheduler is run  */
 	if (GNUNET_WORKER_create(&my_worker, &confirm_startup, NULL, NULL)) {

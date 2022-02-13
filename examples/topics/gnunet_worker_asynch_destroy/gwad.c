@@ -18,10 +18,10 @@ static void task_for_the_scheduler (void * const data) {
 
 int main (const int argc, const char * const * const argv) {
 
-	GNUNET_WORKER_Handle * my_worker;
+	GNUNET_WORKER_Handle my_worker;
 
 	/*  Create a separate thread where GNUnet's scheduler is run  */
-	if (GNUNET_WORKER_create(&my_worker, NULL, goodbye, NULL)) {
+	if (GNUNET_WORKER_create(&my_worker, NULL, &goodbye, NULL)) {
 
 		fprintf(stderr, "Sorry, something went wrong :-(\n");
 		return 1;

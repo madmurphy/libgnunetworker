@@ -39,11 +39,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <gtk/gtk.h>
-
-#if HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-
 #include <gnunet/gettext.h>
 #include <gnunet/gnunet_util_lib.h>
 #include <gnunet/gnunet_worker_lib.h>
@@ -181,7 +176,8 @@ int main (
 	GNUNET_OS_init(&foobar_pd);
 
 	/*  **IMPORTANT** We use `GNUNET_PROGRAM_run2` with `GNUNET_YES` as last
-		argument to avoid that GNUnet's scheduler is automatically started  */
+		argument in order to avoid that GNUnet's scheduler is automatically
+		started  */
 
 	return
 		GNUNET_PROGRAM_run2(

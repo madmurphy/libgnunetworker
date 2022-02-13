@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: libgnunetworker 0.4.1\n"
+"Project-Id-Version: libgnunetworker 0.5.0\n"
 "Report-Msgid-Bugs-To: madmurphy333@gmail.com\n"
-"POT-Creation-Date: 2022-02-06 11:03+0000\n"
-"PO-Revision-Date: 2022-02-06 11:03+0000\n"
+"POT-Creation-Date: 2022-02-12 19:31+0000\n"
+"PO-Revision-Date: 2022-02-12 19:31+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Italian <tp@lists.linux.it>\n"
 "Language: it\n"
@@ -21,7 +21,7 @@ msgstr ""
 msgid "Unable to read the notification sent to the worker thread\n"
 msgstr "Impossibile leggere la notifica inviata al worker thread\n"
 
-#: src/worker.c:684
+#: src/worker.c:722
 msgid ""
 "The worker thread's event loop has been unexpectedly cut off - the scheduler "
 "is down\n"
@@ -29,11 +29,11 @@ msgstr ""
 "Il loop degli eventi del worker thread è stato inaspettatamente interrotto - "
 "lo scheduler si è arrestato\n"
 
-#: src/worker.c:846 src/worker.c:997 src/worker.c:1142 src/worker.c:1378
+#: src/worker.c:883 src/worker.c:1034 src/worker.c:1174 src/worker.c:1403
 msgid "Double free detected\n"
 msgstr "Tentativo di doppio free rilevato\n"
 
-#: src/worker.c:1244 src/worker.c:1285 src/worker.c:1480 src/worker.c:1533
+#: src/worker.c:1276 src/worker.c:1317 src/worker.c:1505 src/worker.c:1558
 #, c-format
 msgid ""
 "`%s` has returned `%d`, possibly due to a bug in the GNUnet Worker module\n"
@@ -41,7 +41,7 @@ msgstr ""
 "`%s` ha restituito `%d`, possibilmente a causa di un bug nel modulo GNUnet "
 "Worker\n"
 
-#: src/worker.c:1260 src/worker.c:1301 src/worker.c:1500 src/worker.c:1549
+#: src/worker.c:1292 src/worker.c:1333 src/worker.c:1525 src/worker.c:1574
 #, c-format
 msgid ""
 "`%s` has returned `%d` (unknown code) while waiting for the worker thread to "
@@ -50,7 +50,7 @@ msgstr ""
 "`%s` ha restituito `%d` (codice sconosciuto) nell'attesa che il worker "
 "thread terminasse\n"
 
-#: src/worker.c:1640
+#: src/worker.c:1657
 msgid "An attempt to push load into a destroyed worker has been detected\n"
 msgstr ""
 "È stato rilevato un tentativo di aggiungere carico a un worker già "

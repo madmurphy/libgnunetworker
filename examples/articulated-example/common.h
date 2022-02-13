@@ -10,7 +10,7 @@
 
 typedef struct ThreadData_T {
 	const char * name;
-	GNUNET_WORKER_Handle * worker;
+	GNUNET_WORKER_Handle worker;
 	pthread_t thread;
 } ThreadData;
 

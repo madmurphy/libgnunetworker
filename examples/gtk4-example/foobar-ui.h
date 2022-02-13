@@ -51,7 +51,7 @@ extern gboolean query_callback_idle (
 
 
 extern void gtk_main_with_gnunet_worker (
-    GNUNET_WORKER_Handle * worker_handler,
+    GNUNET_WORKER_Handle worker_handler,
     gpointer v_app_data
 );
 

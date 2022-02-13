@@ -70,7 +70,7 @@ typedef struct AppData_T {
 		GMutex indexed_mutex;
 	} fs_query;
 	const struct GNUNET_CONFIGURATION_Handle * gnunet_config;
-    GNUNET_WORKER_Handle * gnunet_worker;
+    GNUNET_WORKER_Handle gnunet_worker;
 	gpointer ui_private;
 	GtkApplication * ui_app;
 	atomic_bool worker_is_running;

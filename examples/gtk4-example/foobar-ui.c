@@ -55,7 +55,7 @@
 **/
 typedef struct UISession_T {
 	AppData * app_data;
-	GNUNET_WORKER_Handle * gnunet_worker;
+	GNUNET_WORKER_Handle gnunet_worker;
 	GtkListStore * list_store;
 	GtkButton * query_button;
 	GtkButton * reset_button;
@@ -342,7 +342,7 @@ static void on_foobar_app_activate (
 
 **/
 void gtk_main_with_gnunet_worker (
-    GNUNET_WORKER_Handle * gnunet_worker,
+    GNUNET_WORKER_Handle gnunet_worker,
     gpointer v_app_data
 ) {
 

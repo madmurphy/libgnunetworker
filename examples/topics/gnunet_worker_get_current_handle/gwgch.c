@@ -5,7 +5,7 @@
 static void task_for_both_threads (void * const data) {
 
 	GNUNET_WORKER_Handle
-		* current_worker = GNUNET_WORKER_get_current_handle();
+		current_worker = GNUNET_WORKER_get_current_handle();
 
 	if (current_worker) {
 
@@ -22,7 +22,7 @@ static void task_for_both_threads (void * const data) {
 
 int main (const int argc, const char * const * const argv) {
 
-	GNUNET_WORKER_Handle * my_worker;
+	GNUNET_WORKER_Handle my_worker;
 
 	/*  Create a separate thread where GNUnet's scheduler is run  */
 	if (GNUNET_WORKER_create(&my_worker, NULL, NULL, NULL)) {

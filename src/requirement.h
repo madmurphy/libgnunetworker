@@ -45,9 +45,9 @@
 	            degree (red) or fullfilled (green)
 **/
 typedef struct Requirement {
-	pthread_cond_t req_cond;
-	pthread_mutex_t req_mutex;
-	unsigned int req_unfulfillment;
+	pthread_cond_t req_cond;		/**< The requirement's condition **/
+	pthread_mutex_t req_mutex;		/**< The requirement's mutex **/
+	unsigned int req_unfulfillment;	/**< The requirement's unfulfillment **/
 } Requirement;
 
 

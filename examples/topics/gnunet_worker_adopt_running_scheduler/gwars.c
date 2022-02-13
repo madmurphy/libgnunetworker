@@ -19,8 +19,8 @@ static void bar (void * const data) {
 
 
 static void master_thread (
-	GNUNET_WORKER_Handle * worker,
-	void * const IGNOREME
+	GNUNET_WORKER_Handle worker,
+	void * const data
 ) {
 
 	/*  Run a function in the scheduler's thread  */
@@ -48,7 +48,7 @@ static void on_worker_end (void * const data) {
 
 static void scheduler_main (void * const data) {
 
-	GNUNET_WORKER_Handle * my_worker;
+	GNUNET_WORKER_Handle my_worker;
 
 	if (
 		GNUNET_WORKER_adopt_running_scheduler(

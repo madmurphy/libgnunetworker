@@ -10,7 +10,7 @@ static void task_for_the_scheduler (void * const data) {
 
 
 static void master_main (
-	GNUNET_WORKER_Handle * const worker,
+	GNUNET_WORKER_Handle const worker,
 	void * const data
 ) {
 
@@ -34,7 +34,7 @@ static void master_main (
 
 int main (const int argc, const char * const * const argv) {
 
-	GNUNET_WORKER_Handle * my_worker;
+	GNUNET_WORKER_Handle my_worker;
 
 	/*  Run the GNUnet's scheduler in the current thread  */
 	if (

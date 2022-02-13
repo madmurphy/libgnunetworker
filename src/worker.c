@@ -92,10 +92,10 @@ static const unsigned char BEEP_CODE = '\a';
 
 /**
 
-	@brief      The handle of the worker this thread is serving as, or `NULL`
+	@brief      The worker this thread is serving as, or `NULL`
 
 **/
-_Thread_local static GNUNET_WORKER_Handle * currently_serving_as = NULL;
+_Thread_local static GNUNET_WORKER_Handle currently_serving_as = NULL;
 
 
 
@@ -128,19 +128,19 @@ static inline int thread_create_detached (
 
 	@brief      Launch `GNUNET_SCHEDULER_cancel()` on a pointer to a scheduled
 	            task and set the pointer to `NULL`
-	@param      sch_ptr         A pointer to a pointer to a scheduled task
+	@param      tsk_ptr         A pointer to a pointer to a scheduled task
 	                                                             [NON-NULLABLE]
 
-	The @p sch_ptr paramenter cannot be `NULL`, however it can point to `NULL`.
+	The @p tsk_ptr paramenter cannot be `NULL`, however it can point to `NULL`.
 	If that is the case this function is no-op.
 
 **/
 static inline void clear_schedule (
-	struct GNUNET_SCHEDULER_Task ** const sch_ptr
+	struct GNUNET_SCHEDULER_Task ** const tsk_ptr
 ) {
-	struct GNUNET_SCHEDULER_Task * const tmp = *sch_ptr;
+	struct GNUNET_SCHEDULER_Task * const tmp = *tsk_ptr;
 	if (tmp) {
-		*sch_ptr = NULL;
+		*tsk_ptr = NULL;
 		GNUNET_SCHEDULER_cancel(tmp);
 	}
 }
@@ -150,18 +150,18 @@ static inline void clear_schedule (
 
 	@brief      Free a pointed `GNUNET_WORKER_JobList` and set the pointer to
 	            `NULL`
-	@param      jobl_ptr        The pointer to set to `NULL`     [NON-NULLABLE]
+	@param      jlst_ptr        The pointer to set to `NULL`     [NON-NULLABLE]
 
-	The @p jobl_ptr paramenter cannot be `NULL`, however it can point to
+	The @p jlst_ptr paramenter cannot be `NULL`, however it can point to
 	`NULL`. If that is the case this function is no-op.
 
 **/
 static inline void job_list_clear_unlocked (
-	GNUNET_WORKER_JobList ** const jobl_ptr
+	GNUNET_WORKER_JobList ** const jlst_ptr
 ) {
 	GNUNET_WORKER_JobList * iter;
-	if ((iter = *jobl_ptr)) {
-		*jobl_ptr = NULL;
+	if ((iter = *jlst_ptr)) {
+		*jlst_ptr = NULL;
 		while (iter->next) {
 			free((iter = iter->next)->prev);
 		}
@@ -174,19 +174,19 @@ static inline void job_list_clear_unlocked (
 
 	@brief      Lock a mutex, free a pointed `GNUNET_WORKER_JobList`, set the
 	            pointer to `NULL` and unlock the mutex
-	@param      jobl_ptr        The pointer to set to `NULL`     [NON-NULLABLE]
+	@param      jlst_ptr        The pointer to set to `NULL`     [NON-NULLABLE]
 	@param      mutex_ptr       The mutex to lock and unlock     [NON-NULLABLE]
 
-	The @p jobl_ptr paramenter cannot be `NULL`, however it can point to
+	The @p jlst_ptr paramenter cannot be `NULL`, however it can point to
 	`NULL`. If that is the case this function is no-op.
 
 **/
 static inline void job_list_clear_locked (
-	GNUNET_WORKER_JobList ** const jobl_ptr,
+	GNUNET_WORKER_JobList ** const jlst_ptr,
 	pthread_mutex_t * const mutex_ptr
 ) {
 	pthread_mutex_lock(mutex_ptr);
-	job_list_clear_unlocked(jobl_ptr);
+	job_list_clear_unlocked(jlst_ptr);
 	pthread_mutex_unlock(mutex_ptr);
 }
 
@@ -196,13 +196,13 @@ static inline void job_list_clear_locked (
 	@brief      Undo what `GNUNET_WORKER_allocate()` did
 	@param      worker          The worker to free               [NON-NULLABLE]
 
-	@note   The two linked lists `GNUNET_WORKER_Handle::schedules` and
-	        `GNUNET_WORKER_Handle::wishlist` must be freed separately before
+	@note   The two linked lists `GNUNET_WORKER_Instance::schedules` and
+	        `GNUNET_WORKER_Instance::wishlist` must be freed separately before
 	        calling this function.
 
 **/
 static inline void GNUNET_WORKER_unallocate (
-	GNUNET_WORKER_Handle * const worker
+	const GNUNET_WORKER_Handle worker
 ) {
 	close(worker->beep_fd[0]);
 	close(worker->beep_fd[1]);
@@ -227,13 +227,13 @@ static inline void GNUNET_WORKER_unallocate (
 	The worker thread must not paint `worker->worker_is_disposable` red before
 	invoking this function, or it will hang forever.
 
-	@note   The two linked lists `GNUNET_WORKER_Handle::schedules` and
-	        `GNUNET_WORKER_Handle::wishlist` must be freed separately before
+	@note   The two linked lists `GNUNET_WORKER_Instance::schedules` and
+	        `GNUNET_WORKER_Instance::wishlist` must be freed separately before
 	        calling this function.
 
 **/
 static inline void GNUNET_WORKER_dispose (
-	GNUNET_WORKER_Handle * const worker
+	const GNUNET_WORKER_Handle worker
 ) {
 	requirement_paint_green(&worker->scheduler_has_returned);
 	requirement_wait_for_green(&worker->worker_is_disposable);
@@ -259,13 +259,13 @@ static inline void GNUNET_WORKER_dispose (
 	The worker thread must not paint `worker->worker_is_disposable` red before
 	invoking this function, or it might hang forever.
 
-	@note   The two linked lists `GNUNET_WORKER_Handle::schedules` and
-	        `GNUNET_WORKER_Handle::wishlist` must be freed separately before
+	@note   The two linked lists `GNUNET_WORKER_Instance::schedules` and
+	        `GNUNET_WORKER_Instance::wishlist` must be freed separately before
 	        calling this function.
 
 **/
 static inline void GNUNET_WORKER_dispose_if_guest (
-	GNUNET_WORKER_Handle * const worker
+	const GNUNET_WORKER_Handle worker
 ) {
 	if (worker->flags & WORKER_FLAG_IS_GUEST) {
 		GNUNET_WORKER_dispose(worker);
@@ -276,12 +276,11 @@ static inline void GNUNET_WORKER_dispose_if_guest (
 /**
 
 	@brief      Terminate a worker
-	@param      v_worker        The current `GNUNET_WORKER_Handle` passed as
-	                            `void *`                         [NON-NULLABLE]
+	@param      worker          The worker to terminate          [NON-NULLABLE]
 
 **/
 static inline void GNUNET_WORKER_terminate (
-	GNUNET_WORKER_Handle * const worker
+	const GNUNET_WORKER_Handle worker
 ) {
 	if (worker->on_terminate) {
 		worker->on_terminate(worker->data);
@@ -298,21 +297,21 @@ static inline void GNUNET_WORKER_terminate (
 
 	@brief      Cancel all the tasks in a pointed `GNUNET_WORKER_JobList`, free
 	            the memory and set the pointer to `NULL`
-	@param      jobl_ptr        The pointer to set to `NULL`     [NON-NULLABLE]
+	@param      jlst_ptr        The pointer to set to `NULL`     [NON-NULLABLE]
 
-	The @p jobl_ptr paramenter cannot be `NULL`, however it can point to
+	The @p jlst_ptr paramenter cannot be `NULL`, however it can point to
 	`NULL`. If that is the case this function is no-op.
 
 **/
 static void job_list_unschedule_and_clear (
-	GNUNET_WORKER_JobList ** const jobl_ptr
+	GNUNET_WORKER_JobList ** const jlst_ptr
 ) {
 
 	GNUNET_WORKER_JobList * iter;
 
-	if ((iter = *jobl_ptr)) {
+	if ((iter = *jlst_ptr)) {
 
-		*jobl_ptr = NULL;
+		*jlst_ptr = NULL;
 
 
 		/* \                                 /\
@@ -340,15 +339,15 @@ static void job_list_unschedule_and_clear (
 
 	@brief      Handler added via `GNUNET_SCHEDULER_add_shutdown()` when the
 	            shutdown is triggered by some of our functions
-	@param      v_worker        The current `GNUNET_WORKER_Handle` passed as
-	                            `void *`                         [NON-NULLABLE]
+	@param      v_worker        The worker in which to trigger the scheduler's
+	                            shutdown, passed as `void *`     [NON-NULLABLE]
 
 **/
 static void attended_shutdown_handler (
 	void * const v_worker
 ) {
 
-	#define worker ((GNUNET_WORKER_Handle *) v_worker)
+	#define worker ((GNUNET_WORKER_Handle) v_worker)
 
 	/*  `worker->kill_mutex` will be unlocked by `GNUNET_WORKER_dispose()`
 		either now or later...  */
@@ -366,15 +365,15 @@ static void attended_shutdown_handler (
 
 	@brief      Handler added via `GNUNET_SCHEDULER_add_shutdown()` when the
 	            shutdown is triggered without invoking our functions
-	@param      v_worker        The current `GNUNET_WORKER_Handle` passed as
-	                            `void *`                         [NON-NULLABLE]
+	@param      v_worker        The worker in which to trigger the scheduler's
+	                            shutdown, passed as `void *`     [NON-NULLABLE]
 
 **/
 static void unattended_shutdown_handler (
 	void * const v_worker
 ) {
 
-	#define worker ((GNUNET_WORKER_Handle *) v_worker)
+	#define worker ((GNUNET_WORKER_Handle) v_worker)
 
 	pthread_mutex_lock(&worker->kill_mutex);
 
@@ -413,8 +412,9 @@ static void unattended_shutdown_handler (
 /**
 
 	@brief      Perform a task and clean up afterwards
-	@param      v_job           The member of `GNUNET_WORKER_Handle::schedules`
-	                            to run, passed as `void *`       [NON-NULLABLE]
+	@param      v_job           The member of
+	                            `GNUNET_WORKER_Instance::schedules` to run,
+	                            passed as `void *`               [NON-NULLABLE]
 
 **/
 static void call_and_unlist_handler (
@@ -457,15 +457,15 @@ static void call_and_unlist_handler (
 
 	@brief      A routine that is woken up by a pipe and schedules new tasks
 	            requested by other threads
-	@param      v_worker        The current `GNUNET_WORKER_Handle` passed as
-	                            `void *`                         [NON-NULLABLE]
+	@param      v_worker        The worker this listener routine belongs to,
+	                            passed as `void *`               [NON-NULLABLE]
 
 **/
 static void load_request_handler (
 	void * const v_worker
 ) {
 
-	#define worker ((GNUNET_WORKER_Handle *) v_worker)
+	#define worker ((GNUNET_WORKER_Handle) v_worker)
 
 	pthread_mutex_lock(&worker->wishes_mutex);
 
@@ -489,7 +489,7 @@ static void load_request_handler (
 
 	}
 
-	if (what_to_do != WORKER_MUST_CONTINUE) {
+	if (what_to_do != GNUNET_WORKER_LONG_LIFE) {
 
 		/*  Worker must die (possibly shutting down the scheduler)  */
 
@@ -504,20 +504,17 @@ static void load_request_handler (
 		/*  `worker->kill_mutex` will be unlocked by `GNUNET_WORKER_dispose()`
 			either now or later...  */
 
-		if (what_to_do == WORKER_MUST_SHUT_DOWN) {
-
-			GNUNET_WORKER_dispose_if_guest(worker);
-			GNUNET_SCHEDULER_shutdown();
-			return;
-
-		} else {
-
-			/*  `what_to_do` equals `WORKER_MUST_BE_DISMISSED`  */
+		if (what_to_do == GNUNET_WORKER_DISMISSAL) {
 
 			GNUNET_WORKER_dispose(worker);
+			return;
 
 		}
 
+		/*  `what_to_do` equals `GNUNET_WORKER_DESTRUCTION`  */
+
+		GNUNET_WORKER_dispose_if_guest(worker);
+		GNUNET_SCHEDULER_shutdown();
 		return;
 
 	}
@@ -590,33 +587,74 @@ static void load_request_handler (
 /**
 
 	@brief      The scheduler's main task that initializes a worker
-	@param      v_worker        The current `GNUNET_WORKER_Handle` passed as
-	                            `void *`                         [NON-NULLABLE]
+	@param      v_worker        The worker this is the main routine of, passed
+	                            as `void *`                      [NON-NULLABLE]
 
 **/
 static void worker_main_routine (
 	void * const v_worker
 ) {
 
-	#define worker ((GNUNET_WORKER_Handle *) v_worker)
+	#define worker ((GNUNET_WORKER_Handle) v_worker)
+
+	const GNUNET_WORKER_LifeInstructions destiny =
+		worker->on_start ?
+			worker->on_start(worker->data)
+		:
+			GNUNET_WORKER_LONG_LIFE;
+
+	if (destiny != GNUNET_WORKER_LONG_LIFE) {
+
+		pthread_mutex_lock(&worker->kill_mutex);
+
+		if (
+			atomic_load(&worker->state) == WORKER_IS_ALIVE &&
+			(worker->flags & WORKER_FLAG_OWN_THREAD)
+		) {
+
+			pthread_detach(worker->worker_thread);
+
+		}
+
+		atomic_store(&worker->state, WORKER_IS_DYING);
+		/*  Other threads might have started populating the wishlist before the
+			scheduler had even time to start...  */
+		job_list_clear_locked(&worker->wishlist, &worker->wishes_mutex);
+		GNUNET_WORKER_terminate(worker);
+
+		if (destiny == GNUNET_WORKER_DISMISSAL) {
+
+			/*  Worker must be dismissed  */
+
+			GNUNET_WORKER_dispose(worker);
+			return;
+
+		}
+
+		/*  `worker->on_start()` has returned `GNUNET_WORKER_DESTRUCTION`  */
+
+		GNUNET_WORKER_dispose_if_guest(worker);
+		GNUNET_SCHEDULER_shutdown();
+		return;
+
+		/*  `worker->kill_mutex` will be unlocked by `GNUNET_WORKER_dispose()`
+			either now or later...  */
+
+	}
 
 	worker->shutdown_schedule = GNUNET_SCHEDULER_add_shutdown(
 		&unattended_shutdown_handler,
 		v_worker
 	);
 
-	if (!worker->on_start || worker->on_start(worker->data)) {
-
-		worker->listener_schedule = GNUNET_SCHEDULER_add_select(
-			WORKER_LISTENER_PRIORITY,
-			GNUNET_TIME_UNIT_FOREVER_REL,
-			worker->beep_fds,
-			NULL,
-			&load_request_handler,
-			v_worker
-		);
-
-	}
+	worker->listener_schedule = GNUNET_SCHEDULER_add_select(
+		WORKER_LISTENER_PRIORITY,
+		GNUNET_TIME_UNIT_FOREVER_REL,
+		worker->beep_fds,
+		NULL,
+		&load_request_handler,
+		v_worker
+	);
 
 	#undef worker
 
@@ -628,7 +666,7 @@ static void worker_main_routine (
 	@brief      The routine that is run in a new thread and invokes the
 	            worker's master for `GNUNET_WORKER_start_serving()` or
 	            `GNUNET_WORKER_adopt_running_scheduler()`
-	@param      v_worker        The current `GNUNET_WORKER_Handle` passed as
+	@param      v_worker        The worker in need of a master, passed as
 	                            `void *`                         [NON-NULLABLE]
 	@return     Nothing
 
@@ -637,7 +675,7 @@ static void * master_launcher (
 	void * v_worker
 ) {
 
-	#define worker ((GNUNET_WORKER_Handle *) v_worker)
+	#define worker ((GNUNET_WORKER_Handle) v_worker)
 
 	currently_serving_as = NULL;
 	worker->master(worker, worker->data);
@@ -652,8 +690,8 @@ static void * master_launcher (
 
 	@brief      The routine that launches the GNUnet scheduler (often invoked
 	            via `pthread_create()`)
-	@param      v_worker        The current `GNUNET_WORKER_Handle` passed as
-	                            `void *`                         [NON-NULLABLE]
+	@param      v_worker        The worker in need of a running scheduler,
+	                            passed as `void *`               [NON-NULLABLE]
 	@return     Nothing
 
 **/
@@ -661,7 +699,7 @@ static void * scheduler_launcher (
 	void * v_worker
 ) {
 
-	#define worker ((GNUNET_WORKER_Handle *) v_worker)
+	#define worker ((GNUNET_WORKER_Handle) v_worker)
 
 	currently_serving_as = worker;
 	GNUNET_SCHEDULER_run(&worker_main_routine, v_worker);
@@ -701,32 +739,34 @@ static void * scheduler_launcher (
 /**
 
 	@brief      Allocate the memory necessary for a new worker
-	@param      save_handle         A placeholder for storing a handle for the
-	                                new worker created           [NON-NULLABLE]
-	@param      master_routine      A master function to call in a new thread
+    @param      save_handle         A placeholder for storing a handle for the
+                                    new worker created               [NULLABLE]
+    @param      master_routine      A master function to call in a new detached
+                                    thread                           [NULLABLE]
+	@param      on_worker_start     The first routine invoked by the worker,
+	                                with @p worker_data passed as argument; the
+	                                return value of this function determines
+	                                the destiny of the worker        [NULLABLE]
+	@param      on_worker_end       The last routine invoked by the worker,
+	                                with @p worker_data passed as argument
 	                                                                 [NULLABLE]
-	@param      on_worker_start     The first routine invoked by the worker
+    @param      worker_data         Custom user data retrievable at any moment
 	                                                                 [NULLABLE]
-	@param      on_worker_end       The last routine invoked by the worker
-	                                                                 [NULLABLE]
-	@param      worker_data         The custom data owned by the scheduler
-	                                                                 [NULLABLE]
-	@param      owned_thread        Are we the ones that created the
-	                                scheduler's thread?
+	@param      worker_flags        The worker's flags
 	@return     A newly allocated (but not running) worker
 
 **/
 int GNUNET_WORKER_allocate (
-	GNUNET_WORKER_Handle ** const save_handle,
+	GNUNET_WORKER_Handle * const save_handle,
 	const GNUNET_WORKER_MasterRoutine master_routine,
-	const GNUNET_ConfirmRoutine on_worker_start,
+	const GNUNET_WORKER_LifeRoutine on_worker_start,
 	const GNUNET_CallbackRoutine on_worker_end,
 	void * const worker_data,
 	const unsigned int worker_flags
 ) {
 
-	GNUNET_WORKER_Handle
-		* const new_worker = malloc(sizeof(GNUNET_WORKER_Handle));
+	const GNUNET_WORKER_Handle
+		new_worker = malloc(sizeof(GNUNET_WORKER_Instance));
 
 	if (!new_worker) {
 
@@ -750,13 +790,13 @@ int GNUNET_WORKER_allocate (
 	new_worker->listener_schedule = NULL;
 	new_worker->shutdown_schedule = NULL;
 	*((GNUNET_WORKER_MasterRoutine *) &new_worker->master) = master_routine;
-	*((GNUNET_ConfirmRoutine *) &new_worker->on_start) = on_worker_start;
+	*((GNUNET_WORKER_LifeRoutine *) &new_worker->on_start) = on_worker_start;
 	*((GNUNET_CallbackRoutine *) &new_worker->on_terminate) = on_worker_end;
 	*((void **) &new_worker->data) = worker_data;
 	*((struct GNUNET_NETWORK_FDSet **) &new_worker->beep_fds) =
 		GNUNET_NETWORK_fdset_create();
 	new_worker->state = WORKER_IS_ALIVE;
-	new_worker->future_plans = WORKER_MUST_CONTINUE;
+	new_worker->future_plans = GNUNET_WORKER_LONG_LIFE;
 	*((unsigned int *) &new_worker->flags) = worker_flags;
 
 	/*  Fields left undefined: `::worker_thread`  */
@@ -789,13 +829,10 @@ int GNUNET_WORKER_allocate (
 	@brief      Terminate a worker and free its memory, without waiting for the
 	            scheduler to return -- this will be completed in parallel
 	            (asynchronous)
-	@param      worker          The worker to destroy            [NON-NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
-	            `GNUNET_WORKER_ERR_DOUBLE_FREE` and `GNUNET_WORKER_ERR_SIGNAL`
 
 */
 int GNUNET_WORKER_asynch_destroy (
-	GNUNET_WORKER_Handle * const worker
+	const GNUNET_WORKER_Handle worker
 ) {
 
 	int retval = GNUNET_WORKER_SUCCESS;
@@ -903,7 +940,7 @@ int GNUNET_WORKER_asynch_destroy (
 	}
 
 	pthread_mutex_lock(&worker->wishes_mutex);
-	worker->future_plans = WORKER_MUST_SHUT_DOWN;
+	worker->future_plans = GNUNET_WORKER_DESTRUCTION;
 
 	if (
 		!worker->wishlist &&
@@ -940,13 +977,10 @@ int GNUNET_WORKER_asynch_destroy (
 
 	@brief      Uninstall and destroy a worker without shutting down its
 	            scheduler
-	@param      worker          The worker to dismiss            [NON-NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
-	            `GNUNET_WORKER_ERR_DOUBLE_FREE` and `GNUNET_WORKER_ERR_SIGNAL`
 
 */
 int GNUNET_WORKER_dismiss (
-	GNUNET_WORKER_Handle * const worker
+	const GNUNET_WORKER_Handle worker
 ) {
 
 	int retval = GNUNET_WORKER_SUCCESS;
@@ -1049,7 +1083,7 @@ int GNUNET_WORKER_dismiss (
 	}
 
 	pthread_mutex_lock(&worker->wishes_mutex);
-	worker->future_plans = WORKER_MUST_BE_DISMISSED;
+	worker->future_plans = GNUNET_WORKER_DISMISSAL;
 
 	if (!worker->wishlist && write(worker->beep_fd[1], &BEEP_CODE, 1) != 1) {
 
@@ -1083,15 +1117,10 @@ int GNUNET_WORKER_dismiss (
 
 	@brief      Terminate a worker and free its memory, waiting for the
 	            scheduler to complete the shutdown (synchronous)
-	@param      worker          The worker to destroy            [NON-NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
-	            `GNUNET_WORKER_ERR_DOUBLE_FREE`, `GNUNET_WORKER_ERR_UNKNOWN`
-	            `GNUNET_WORKER_ERR_NOT_ALONE`, `GNUNET_WORKER_ERR_SIGNAL` and
-	            `GNUNET_WORKER_ERR_INTERNAL_BUG`
 
 */
 int GNUNET_WORKER_synch_destroy (
-	GNUNET_WORKER_Handle * const worker
+	const GNUNET_WORKER_Handle worker
 ) {
 
 	requirement_paint_red(&worker->worker_is_disposable);
@@ -1191,7 +1220,7 @@ int GNUNET_WORKER_synch_destroy (
 	/*  The user has **not** called this function from the worker thread  */
 
 	pthread_mutex_lock(&worker->wishes_mutex);
-	worker->future_plans = WORKER_MUST_SHUT_DOWN;
+	worker->future_plans = GNUNET_WORKER_DESTRUCTION;
 
 	int tempval =
 		!worker->wishlist &&
@@ -1316,17 +1345,10 @@ int GNUNET_WORKER_synch_destroy (
 	            scheduler to complete the shutdown (synchronous), but only if
 	            this happens within a certain time, otherwise it will be
 	            completed in parallel (asynchronous)
-	@param      worker          The worker to destroy            [NON-NULLABLE]
-	@param      absolute_time   The absolute time to wait until  [NON-NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
-	            `GNUNET_WORKER_ERR_DOUBLE_FREE`, `GNUNET_WORKER_ERR_EXPIRED`,
-	            `GNUNET_WORKER_ERR_INVALID_TIME`, `GNUNET_WORKER_ERR_UNKNOWN`
-	            `GNUNET_WORKER_ERR_NOT_ALONE`, `GNUNET_WORKER_ERR_SIGNAL` and
-	            `GNUNET_WORKER_ERR_INTERNAL_BUG`
 
 */
 int GNUNET_WORKER_timedsynch_destroy (
-	GNUNET_WORKER_Handle * const worker,
+	const GNUNET_WORKER_Handle worker,
 	const struct timespec * const absolute_time
 ) {
 
@@ -1427,7 +1449,7 @@ int GNUNET_WORKER_timedsynch_destroy (
 	/*  The user has **not** called this function from the worker thread  */
 
 	pthread_mutex_lock(&worker->wishes_mutex);
-	worker->future_plans = WORKER_MUST_SHUT_DOWN;
+	worker->future_plans = GNUNET_WORKER_DESTRUCTION;
 
 	int tempval =
 		!worker->wishlist &&
@@ -1561,18 +1583,10 @@ int GNUNET_WORKER_timedsynch_destroy (
 /**
 
 	@brief      Schedule a new function for the worker, with a priority
-	@param      worker          The worker for which the task must be scheduled
-	                                                             [NON-NULLABLE]
-	@param      job_priority    The priority of the task
-	@param      job_routine     The task to schedule             [NON-NULLABLE]
-	@param      job_data        Custom data to pass to the task      [NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
-	            `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
-	            `GNUNET_WORKER_ERR_INVALID_HANDLE`
 
 */
 int GNUNET_WORKER_push_load_with_priority (
-	GNUNET_WORKER_Handle * const worker,
+	const GNUNET_WORKER_Handle worker,
 	const enum GNUNET_SCHEDULER_Priority job_priority,
 	const GNUNET_CallbackRoutine job_routine,
 	void * const job_data
@@ -1729,30 +1743,16 @@ int GNUNET_WORKER_push_load_with_priority (
 /**
 
 	@brief      Start the GNUnet scheduler in a separate thread
-	@param      save_handle         A placeholder for storing a handle for the
-	                                new worker created               [NULLABLE]
-	@param      on_worker_start     The first routine invoked by the worker,
-	                                with @p worker_data passed as argument; the
-	                                scheduler will be immediately interrupted
-	                                if this function returns `false` [NULLABLE]
-	@param      on_worker_end       The last routine invoked by the worker,
-	                                with @p worker_data passed as argument
-	                                                                 [NULLABLE]
-	@param      worker_data         Custom user data retrievable at any moment
-	                                                                 [NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
-	            `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
-	            `GNUNET_WORKER_ERR_THREAD_CREATE`
 
 */
 int GNUNET_WORKER_create (
-	GNUNET_WORKER_Handle ** const save_handle,
-	const GNUNET_ConfirmRoutine on_worker_start,
+	GNUNET_WORKER_Handle * const save_handle,
+	const GNUNET_WORKER_LifeRoutine on_worker_start,
 	const GNUNET_CallbackRoutine on_worker_end,
 	void * const worker_data
 ) {
 
-	GNUNET_WORKER_Handle * worker;
+	GNUNET_WORKER_Handle worker;
 
 	const int tempval = GNUNET_WORKER_allocate(
 		&worker,
@@ -1798,29 +1798,12 @@ int GNUNET_WORKER_create (
 
 	@brief      Launch the GNUnet scheduler in the current thread and turn it
 	            into a worker
-	@param      save_handle         A placeholder for storing a handle for the
-	                                new worker created               [NULLABLE]
-	@param      master_routine      A master function to call in a new detached
-	                                thread                           [NULLABLE]
-	@param      on_worker_start     The first routine invoked by the worker,
-	                                with @p worker_data passed as argument; the
-	                                scheduler will be immediately interrupted
-	                                if this function returns `false` [NULLABLE]
-	@param      on_worker_end       The last routine invoked by the worker,
-	                                with @p worker_data passed as argument
-	                                                                 [NULLABLE]
-	@param      worker_data         Custom user data retrievable at any moment
-	                                                                 [NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
-	            `GNUNET_WORKER_ERR_ALREADY_SERVING`,
-	            `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
-	            `GNUNET_WORKER_ERR_THREAD_CREATE`
 
 */
 int GNUNET_WORKER_start_serving (
-	GNUNET_WORKER_Handle ** const save_handle,
+	GNUNET_WORKER_Handle * const save_handle,
 	const GNUNET_WORKER_MasterRoutine master_routine,
-	const GNUNET_ConfirmRoutine on_worker_start,
+	const GNUNET_WORKER_LifeRoutine on_worker_start,
 	const GNUNET_CallbackRoutine on_worker_end,
 	void * const worker_data
 ) {
@@ -1831,7 +1814,7 @@ int GNUNET_WORKER_start_serving (
 
 	}
 
-	GNUNET_WORKER_Handle * worker;
+	GNUNET_WORKER_Handle worker;
 
 	const int tempval = GNUNET_WORKER_allocate(
 		&worker,
@@ -1878,23 +1861,10 @@ int GNUNET_WORKER_start_serving (
 
 	@brief      Install a load listener into an already running scheduler and
 	            turn the latter into a worker
-	@param      save_handle         A placeholder for storing a handle for the
-	                                new worker created               [NULLABLE]
-	@param      master_routine      A master function to call in a new detached
-	                                thread                           [NULLABLE]
-	@param      on_worker_end       The last routine invoked by the worker,
-	                                with @p worker_data passed as argument
-	                                                                 [NULLABLE]
-	@param      worker_data         Custom user data retrievable at any moment
-	                                                                 [NULLABLE]
-	@return     Possible return values are `GNUNET_WORKER_SUCCESS` (`0`),
-	            `GNUNET_WORKER_ERR_ALREADY_SERVING`,
-	            `GNUNET_WORKER_ERR_NO_MEMORY`, `GNUNET_WORKER_ERR_SIGNAL` and
-	            `GNUNET_WORKER_ERR_THREAD_CREATE`
 
 */
 int GNUNET_WORKER_adopt_running_scheduler (
-	GNUNET_WORKER_Handle ** const save_handle,
+	GNUNET_WORKER_Handle * const save_handle,
 	const GNUNET_WORKER_MasterRoutine master_routine,
 	const GNUNET_CallbackRoutine on_worker_end,
 	void * const worker_data
@@ -1966,11 +1936,9 @@ int GNUNET_WORKER_adopt_running_scheduler (
 /**
 
 	@brief      Get the handle of the current worker if this is a worker thread
-	@return     The worker installed in the current thread or `NULL` if this is
-	            not a worker thread
 
 **/
-GNUNET_WORKER_Handle * GNUNET_WORKER_get_current_handle (void) {
+GNUNET_WORKER_Handle GNUNET_WORKER_get_current_handle (void) {
 
 	return currently_serving_as;
 
@@ -1980,12 +1948,10 @@ GNUNET_WORKER_Handle * GNUNET_WORKER_get_current_handle (void) {
 /**
 
 	@brief      Retrieve the custom data initially passed to the worker
-	@param      worker          The worker to query for the data [NON-NULLABLE]
-	@return     A pointer to the data initially passed to the worker
 
 **/
 void * GNUNET_WORKER_get_data (
-	const GNUNET_WORKER_Handle * const worker
+	const GNUNET_WORKER_Handle worker
 ) {
 
 	return worker->data;
@@ -1996,12 +1962,10 @@ void * GNUNET_WORKER_get_data (
 /**
 
 	@brief      Ping the worker and try to wake up its listener function
-	@param      worker          The worker to ping               [NON-NULLABLE]
-	@return     A boolean: `true` if the ping was successful, `false` otherwise
 
 **/
 bool GNUNET_WORKER_ping (
-	GNUNET_WORKER_Handle * const worker
+	const GNUNET_WORKER_Handle worker
 ) {
 
 	if (currently_serving_as == worker) {

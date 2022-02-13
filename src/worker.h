@@ -36,7 +36,6 @@
 #define __GNUNET_WORKER_PRIVATE_HEADER__
 
 
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdatomic.h>
 #include <time.h>
@@ -117,18 +116,6 @@ enum GNUNET_WORKER_State {
 
 /**
 
-    @brief      Possible future plans for a worker
-
-**/
-enum GNUNET_WORKER_Destiny {
-    WORKER_MUST_CONTINUE = 0,       /**< The worker must continue to live **/
-    WORKER_MUST_SHUT_DOWN = 1,      /**< The worker must shut down **/
-    WORKER_MUST_BE_DISMISSED = 2    /**< The worker must be dismissed **/
-};
-
-
-/**
-
     @brief      Flags set during the creation of a worker
 
 **/
@@ -150,7 +137,7 @@ typedef struct GNUNET_WORKER_JobList {
     struct GNUNET_WORKER_JobList
         * next;                     /**< The next job in the list **/
     GNUNET_WORKER_Handle
-        * assigned_to;              /**< The worker the job is assigned to **/
+        assigned_to;                /**< The worker the job is assigned to **/
     void
         * data;                     /**< The user's custom data for the job **/
     GNUNET_CallbackRoutine
@@ -171,7 +158,7 @@ typedef struct GNUNET_WORKER_JobList {
     exclusion mechanism is provided.
 
 **/
-typedef struct GNUNET_WORKER_Handle {
+typedef struct GNUNET_WORKER_Instance {
     Requirement
         scheduler_has_returned, /**< The scheduler has returned **/
         worker_is_disposable;   /**< `free()` can be launched on the worker **/
@@ -186,7 +173,7 @@ typedef struct GNUNET_WORKER_Handle {
         * shutdown_schedule;    /**< Accessed only by the worker thread **/
     GNUNET_WORKER_MasterRoutine
         const master;           /**< See the `master_routine` argument **/
-    GNUNET_ConfirmRoutine
+    GNUNET_WORKER_LifeRoutine
         const on_start;         /**< See the `on_worker_start` argument **/
     GNUNET_CallbackRoutine
         const on_terminate;     /**< See the `on_worker_end` argument **/
@@ -202,9 +189,9 @@ typedef struct GNUNET_WORKER_Handle {
         const flags;            /**< See `enum GNUNET_WORKER_Flags` **/
     atomic_int
         state;                  /**< Atomic; see `enum GNUNET_WORKER_State` **/
-    enum GNUNET_WORKER_Destiny
+    GNUNET_WORKER_LifeInstructions
         future_plans;           /**< Mutual exclusion via `::wishes_mutex` **/
-} GNUNET_WORKER_Handle;
+} GNUNET_WORKER_Instance;
 
 
 #endif

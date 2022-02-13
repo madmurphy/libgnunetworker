@@ -36,10 +36,7 @@
 #define __FOOBAR_GNUNET_H__
 
 
-#include <stdbool.h>
-
-
-extern bool fs_service_start_check (
+extern GNUNET_WORKER_LifeInstructions fs_service_start_check (
 	void * const v_app_data
 );
 

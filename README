@@ -26,7 +26,7 @@ list” of routines to schedule, which can be populated asynchronously by any
 thread and gets emptied synchronously only by the scheduler according to the
 latter's natural flow.
 
-While using this framework, threads must never invoke **GNUnet**'s scheduler
+When using this framework, threads must never invoke **GNUnet**'s scheduler
 directly (preferably they must not even include `gnunet/gnunet_scheduler_lib.h`
 in their scope), and can only use `GNUNET_WORKER_push_load()` or
 `GNUNET_WORKER_push_load_with_priority()` to schedule new functions. They will
@@ -60,7 +60,7 @@ static void task_for_the_scheduler (void * const data) {
 
 int main (const int argc, const char * const * const argv) {
 
-    GNUNET_WORKER_Handle * my_worker;
+    GNUNET_WORKER_Handle my_worker;
 
     /*  Create a separate thread where GNUnet's scheduler is run  */
     if (GNUNET_WORKER_create(&my_worker, NULL, NULL, NULL)) {
@@ -127,10 +127,10 @@ There are three ways for terminating a worker and shutting down its associated
    (synchronous, “join”) only if this happens within a certain time, otherwise
    it will be completed in parallel (asynchronous)
 
-If a worker must be destroyed without shutting down its associated scheduler,
-the `GNUNET_WORKER_dismiss()` function is available. The latter turns a worker
-back into a “classic **GNUnet**'s scheduler” without any multithreading
-facility and without a “load listener”.
+If a worker must be destroyed without shutting down its GNUnet scheduler, the
+`GNUNET_WORKER_dismiss()` function is available. The latter turns a worker back
+into a “classic **GNUnet**'s scheduler” without any multithreading facility and
+without a “load listener”.
 
 All the functions provided by this library can be safely launched by any thread
 at any moment.

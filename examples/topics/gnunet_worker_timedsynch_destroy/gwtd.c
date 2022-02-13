@@ -43,7 +43,7 @@ void now_plus_milliseconds (
 
 int main (const int argc, const char * const * const argv) {
 
-	GNUNET_WORKER_Handle * my_worker;
+	GNUNET_WORKER_Handle my_worker;
 
 	/*  Create a separate thread where GNUnet's scheduler is run  */
 	if (GNUNET_WORKER_create(&my_worker, NULL, &goodbye, NULL)) {
