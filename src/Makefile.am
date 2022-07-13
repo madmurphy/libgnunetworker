@@ -3,7 +3,6 @@
 LTVERSIONINFO = $(INTERFACE_NUM):$(IMPLEMENTATION_NUM):$(INTERFACES_SUPPORTED)
 
 AM_CPPFLAGS = \
-	'-I$(top_srcdir)/include' \
 	'-DPACKAGE_LOCALE_DIR="$(localedir)"' \
 	'-DPACKAGE_SRC_DIR="$(srcdir)"' \
 	'-DPACKAGE_DATA_DIR="$(pkgdatadir)"'
@@ -16,6 +15,11 @@ AM_CFLAGS = \
 	-std=c11 \
 	$(GNUNET_CFLAGS) \
 	$(WARN_CFLAGS)
+
+gnunetincludedir = $(includedir)/gnunet
+
+gnunetinclude_HEADERS = \
+	include/gnunet_worker_lib.h
 
 lib_LTLIBRARIES = \
 	lib@PROJECT_NAME@.la

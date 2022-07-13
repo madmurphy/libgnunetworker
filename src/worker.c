@@ -46,7 +46,7 @@
 #include <gnunet/platform.h>
 #include <gnunet/gnunet_scheduler_lib.h>
 #include <gnunet/gnunet_network_lib.h>
-#include <gnunet_worker_lib.h>
+#include "include/gnunet_worker_lib.h"
 #include "requirement.h"
 #include "worker.h"
 
@@ -356,6 +356,7 @@ static void attended_shutdown_handler (
 	worker->shutdown_schedule = NULL;
 	GNUNET_WORKER_terminate(worker);
 	GNUNET_WORKER_dispose_if_guest(worker);
+
 	#undef worker
 
 }

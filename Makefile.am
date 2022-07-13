@@ -33,12 +33,6 @@ EXTRA_DIST += \
 endif DIST_DOCS_DIR
 
 
-gnunetincludedir = $(includedir)/gnunet
-
-gnunetinclude_HEADERS = \
-	include/gnunet_worker_lib.h
-
-
 if NLS_ENABLED
 
 SUBDIRS += \

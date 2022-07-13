@@ -44,7 +44,7 @@
 #include <gnunet/gnunet_common.h>
 #include <gnunet/gnunet_scheduler_lib.h>
 #include <gnunet/gnunet_network_lib.h>
-#include <gnunet_worker_lib.h>
+#include "include/gnunet_worker_lib.h"
 #include "requirement.h"
 
 
@@ -121,7 +121,7 @@ enum GNUNET_WORKER_State {
 **/
 enum GNUNET_WORKER_Flags {
     WORKER_FLAG_NONE = 0,       /**< No flags **/
-    WORKER_FLAG_OWN_THREAD = 1, /**< The worker runs in a thread it created **/
+    WORKER_FLAG_OWN_THREAD = 1, /**< The worker runs in a thread it owns **/
     WORKER_FLAG_IS_GUEST = 2    /**< The worker did not start the scheduler **/
 };
 

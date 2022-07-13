@@ -1,6 +1,6 @@
 {
 	"name": "libgnunetworker",
-	"version": "0.5.0",
+	"version": "1.0.0",
 	"description": "Multithreading with GNUnet",
 	"homepage": "https://github.com/madmurphy/libgnunetworker",
 	"author": "madmurphy333@gmail.com",
@@ -21,6 +21,7 @@
 	},
 	"keywords": [
 		"c",
+		"event-loop",
 		"gnunet",
 		"gnu",
 		"library",

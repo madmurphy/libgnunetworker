@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: libgnunetworker 0.5.0\n"
+"Project-Id-Version: libgnunetworker 1.0.0\n"
 "Report-Msgid-Bugs-To: madmurphy333@gmail.com\n"
-"POT-Creation-Date: 2022-02-12 19:31+0000\n"
-"PO-Revision-Date: 2022-02-12 19:31+0000\n"
+"POT-Creation-Date: 2022-07-13 14:42+0000\n"
+"PO-Revision-Date: 2022-07-13 14:42+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Italian <tp@lists.linux.it>\n"
 "Language: it\n"
@@ -17,11 +17,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/worker.c:487
+#: src/worker.c:488
 msgid "Unable to read the notification sent to the worker thread\n"
 msgstr "Impossibile leggere la notifica inviata al worker thread\n"
 
-#: src/worker.c:722
+#: src/worker.c:723
 msgid ""
 "The worker thread's event loop has been unexpectedly cut off - the scheduler "
 "is down\n"
@@ -29,11 +29,11 @@ msgstr ""
 "Il loop degli eventi del worker thread è stato inaspettatamente interrotto - "
 "lo scheduler si è arrestato\n"
 
-#: src/worker.c:883 src/worker.c:1034 src/worker.c:1174 src/worker.c:1403
+#: src/worker.c:884 src/worker.c:1032 src/worker.c:1172 src/worker.c:1401
 msgid "Double free detected\n"
 msgstr "Tentativo di doppio free rilevato\n"
 
-#: src/worker.c:1276 src/worker.c:1317 src/worker.c:1505 src/worker.c:1558
+#: src/worker.c:1274 src/worker.c:1315 src/worker.c:1503 src/worker.c:1556
 #, c-format
 msgid ""
 "`%s` has returned `%d`, possibly due to a bug in the GNUnet Worker module\n"
@@ -41,7 +41,7 @@ msgstr ""
 "`%s` ha restituito `%d`, possibilmente a causa di un bug nel modulo GNUnet "
 "Worker\n"
 
-#: src/worker.c:1292 src/worker.c:1333 src/worker.c:1525 src/worker.c:1574
+#: src/worker.c:1290 src/worker.c:1331 src/worker.c:1523 src/worker.c:1572
 #, c-format
 msgid ""
 "`%s` has returned `%d` (unknown code) while waiting for the worker thread to "
@@ -50,7 +50,7 @@ msgstr ""
 "`%s` ha restituito `%d` (codice sconosciuto) nell'attesa che il worker "
 "thread terminasse\n"
 
-#: src/worker.c:1657
+#: src/worker.c:1655
 msgid "An attempt to push load into a destroyed worker has been detected\n"
 msgstr ""
 "È stato rilevato un tentativo di aggiungere carico a un worker già "
